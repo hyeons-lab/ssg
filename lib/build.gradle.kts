@@ -16,7 +16,7 @@ dependencies {
 tasks.withType<Jar> {
     manifest {
         attributes["Implementation-Title"] = "Static Site Generator"
-        attributes["Implementation-Version"] = "0.0.1"
+        attributes["Implementation-Version"] = version
     }
 }
 
@@ -26,7 +26,7 @@ publishing {
             from(components["java"])
             groupId = "com.hyeonslab"
             artifactId = "ssg"
-            version = "0.0.1"
+            version = version
         }
     }
     repositories {
