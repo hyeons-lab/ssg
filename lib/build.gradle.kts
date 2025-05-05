@@ -35,5 +35,5 @@ publishing {
 }
 
 tasks.withType<AbstractArchiveTask> {
-    setProperty("archiveBaseName", "ssg")
+    setProperty("archiveBaseName", "hyeons-lab-ssg")
 }
