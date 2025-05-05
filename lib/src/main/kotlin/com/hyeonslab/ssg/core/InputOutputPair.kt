@@ -24,7 +24,7 @@ fun InputOutputPair.copyResource() {
     if (!parentFile.exists()) {
         parentFile.mkdirs()
     }
-    ClassLoader.getSystemResourceAsStream(inputFilename)?.asSource()?.buffered()?.let { input ->
+    ClassLoader.getSystemResourceAsStream(inputFilename)?.asSource()?.buffered()?.use { input ->
         File(candidateOutputFilename).let { file ->
             file.outputStream().asSink().buffered().use { outputFileBuffer ->
                 outputFileBuffer.transferFrom(input)
