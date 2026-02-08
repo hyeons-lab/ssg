@@ -5,5 +5,6 @@ import kotlinx.html.FlowContent
 interface Page {
     val title: String
     val outputFilename: String
-    val render: (PageSettings, FlowContent) -> Unit
+    val content: (PageSettings, FlowContent) -> Unit
+    val footer: (PageSettings, FlowContent) -> Unit
 }

@@ -32,6 +32,7 @@ data class Site(
     val pageSettings: PageSettings,
     val instagram: String,
     val logo: Logo,
+    val blurNavBackground: Boolean = false,
 ) {
     fun copyResources() {
         resources.forEach { inputOutputPair ->
@@ -48,7 +49,7 @@ data class Site(
                         head {
                             title { +this@Site.title }
                             link {
-                                href = "css/tailwind.min.css"
+                                href = "css/tailwind.css"
                                 rel = "stylesheet"
                             }
                             link {
@@ -90,8 +91,9 @@ data class Site(
                                 pages = navLinks,
                             )
                             div(classes = "mx-4 my-4") {
-                                page.render(pageSettings, this)
+                                page.content(pageSettings, this)
                             }
+                            page.footer(pageSettings, this)
                         }
                     }
                 }

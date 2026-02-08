@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.hyeonslab"
-version = "0.0.1"
+version = "0.0.6"
 
 dependencies {
     api(libs.bundles.kotlinx.html)
