@@ -30,5 +30,5 @@ fun InputOutputPair.copyResource() {
                 outputFileBuffer.transferFrom(input)
             }
         }
-    }
+    } ?: error("Resource not found: $inputFilename")
 }

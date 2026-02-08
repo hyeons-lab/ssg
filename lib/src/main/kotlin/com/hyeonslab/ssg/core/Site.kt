@@ -13,10 +13,8 @@ import kotlinx.html.link
 import kotlinx.html.meta
 import kotlinx.html.stream.appendHTML
 import kotlinx.html.title
-import kotlinx.serialization.Serializable
 import java.io.File
 
-@Serializable
 data class Site(
     val outputPath: String,
     val title: String,

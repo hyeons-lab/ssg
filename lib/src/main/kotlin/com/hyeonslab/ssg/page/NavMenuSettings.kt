@@ -2,6 +2,7 @@ package com.hyeonslab.ssg.page
 
 import kotlinx.serialization.Serializable
 
+@Serializable
 data class NavMenuSettings(
     val backgroundColor: String,
     val navSelectedColor: String,

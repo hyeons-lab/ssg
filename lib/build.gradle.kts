@@ -1,11 +1,12 @@
 plugins {
     id("buildsrc.convention.kotlin-jvm")
+    alias(libs.plugins.kotlinPluginSerialization)
     `java-library`
     `maven-publish`
 }
 
 group = "com.hyeonslab"
-version = "0.0.6"
+version = "0.0.7-SNAPSHOT"
 
 dependencies {
     api(libs.bundles.kotlinx.html)
