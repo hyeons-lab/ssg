@@ -93,6 +93,44 @@ com.hyeonslab.ssg/
 
 ---
 
+## Commit Guidelines
+
+### Commit Message Format
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+```
+<type>: <description>
+
+[optional body explaining the change and why]
+
+[optional breaking changes section]
+```
+
+**Types:**
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `refactor:` - Code restructuring without behavior change
+- `test:` - Adding or updating tests
+- `docs:` - Documentation changes
+- `perf:` - Performance improvements
+- `chore:` - Maintenance tasks
+
+**Examples:**
+```
+feat: add graceful streaming completion for audio playback
+
+fix: resolve race condition in audio streaming initialization
+
+refactor: extract string provider interface for testability
+```
+
+### Commit Organization
+- Create **logical commits** that group related changes
+- Each commit should represent a single cohesive change
+- Avoid mixing unrelated changes (e.g., bug fixes + features)
+- Write detailed commit messages explaining **why**, not just **what**
+
+---
+
 ## Security Considerations
 
 **Critical protections in place:**
