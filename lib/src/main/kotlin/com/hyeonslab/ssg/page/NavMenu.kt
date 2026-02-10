@@ -66,14 +66,13 @@ import kotlinx.html.style
 fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSettings) {
   val sticky = if (navMenuSettings.isSticky) "sticky" else ""
   val blur = if (navMenuSettings.blurNavBackground) "backdrop-blur-md" else ""
-  val leftMargin = "ms-2 md:ms-8 lg:ms-${navMenuSettings.horizontalMargin}"
-  val rightMargin = "me-2 md:me-8 lg:me-${navMenuSettings.horizontalMargin}"
+  val leftMargin = "ms-4 sm:ms-8 md:ms-${navMenuSettings.horizontalMargin}"
+  val rightMargin = "me-4 sm:me-8 md:me-${navMenuSettings.horizontalMargin}"
 
   nav(
     classes =
-      "$blur $sticky z-[255] ${navMenuSettings.fontFamily} flex w-full py-4 px-2 ${navMenuSettings.backgroundColor}"
+      "$blur $sticky z-[255] ${navMenuSettings.fontFamily} flex w-full py-4 px-4 sm:px-8 md:px-${navMenuSettings.horizontalMargin} ${navMenuSettings.backgroundColor}"
   ) {
-    div(classes = leftMargin)
     a(href = "./index.html") {
       div {
         style = "height: ${navMenuSettings.logo.height}px; width: ${navMenuSettings.logo.width}px;"
@@ -84,7 +83,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
       }
     }
     val baseClasses =
-      "${Tailwind.Text.Size.sm} ${navMenuSettings.fontFamily} mx-2 me-2 vertical-menu horizontal-menu md:text-base lg:text-lg"
+      "${Tailwind.Text.Size.sm} ${navMenuSettings.fontFamily} mx-1 md:mx-2 vertical-menu horizontal-menu md:text-base lg:text-lg"
 
     pages.forEach { page ->
       h1(classes = baseClasses) {
@@ -94,7 +93,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
           navMenuSettings.navSelectedColor,
           navMenuSettings.navDefaultColor,
         )
-        a(classes = "uppercase z-1 mx-2 text-nowrap", href = "./${page.outputFilename}") {
+        a(classes = "uppercase z-1 mx-1 md:mx-2 text-nowrap", href = "./${page.outputFilename}") {
           +page.title
         }
       }
@@ -102,26 +101,27 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
 
     div(classes = "grow")
 
-    // Social media links
-    navMenuSettings.instagram?.let { username ->
-      val instagramUrl = "https://www.instagram.com/$username"
-      a(
-        href = instagramUrl,
-        classes =
-          "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm} md:text-base lg:text-lg px-3 py-4",
-      ) {
-        i(classes = "fa-brands fa-instagram")
+    // Social media links - wrapped in flex container for proper spacing
+    div(classes = "flex gap-4 py-4") {
+      navMenuSettings.instagram?.let { username ->
+        val instagramUrl = "https://www.instagram.com/$username"
+        a(
+          href = instagramUrl,
+          classes =
+            "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm} md:text-base lg:text-lg",
+        ) {
+          i(classes = "fa-brands fa-instagram")
+        }
+      }
+      navMenuSettings.email?.let { email ->
+        a(
+          href = "mailto:$email",
+          classes =
+            "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm} md:text-base lg:text-lg",
+        ) {
+          i(classes = "fa-regular fa-envelope")
+        }
       }
     }
-    navMenuSettings.email?.let { email ->
-      a(
-        href = "mailto:$email",
-        classes =
-          "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm} md:text-base lg:text-lg px-3 py-4",
-      ) {
-        i(classes = "fa-regular fa-envelope")
-      }
-    }
-    div(classes = rightMargin)
   }
 }
