@@ -66,8 +66,8 @@ import kotlinx.html.style
 fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSettings) {
   val sticky = if (navMenuSettings.isSticky) "sticky" else ""
   val blur = if (navMenuSettings.blurNavBackground) "backdrop-blur-md" else ""
-  val leftMargin = "ms-${navMenuSettings.horizontalMargin}"
-  val rightMargin = "me-${navMenuSettings.horizontalMargin}"
+  val leftMargin = "ms-2 md:ms-8 lg:ms-${navMenuSettings.horizontalMargin}"
+  val rightMargin = "me-2 md:me-8 lg:me-${navMenuSettings.horizontalMargin}"
 
   nav(
     classes =
@@ -94,7 +94,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
           navMenuSettings.navSelectedColor,
           navMenuSettings.navDefaultColor,
         )
-        a(classes = "uppercase z-1 mx-4 text-nowrap", href = "./${page.outputFilename}") {
+        a(classes = "uppercase z-1 mx-2 text-nowrap", href = "./${page.outputFilename}") {
           +page.title
         }
       }
@@ -108,7 +108,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
       a(
         href = instagramUrl,
         classes =
-          "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm} md:text-base lg:text-lg me-1",
+          "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm} md:text-base lg:text-lg px-3 py-4",
       ) {
         i(classes = "fa-brands fa-instagram")
       }
@@ -117,7 +117,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
       a(
         href = "mailto:$email",
         classes =
-          "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm} md:text-base lg:text-lg ms-4",
+          "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm} md:text-base lg:text-lg px-3 py-4",
       ) {
         i(classes = "fa-regular fa-envelope")
       }
