@@ -446,7 +446,7 @@ class NavMenuTest :
           }
         }
 
-        html shouldContain "px-4"
+        html shouldContain "px-2"
         html shouldContain "md:px-16"
       }
 
@@ -472,8 +472,57 @@ class NavMenuTest :
           }
         }
 
-        html shouldContain "px-4"
+        html shouldContain "px-2"
         html shouldContain "md:px-8"
+      }
+
+      test("should wrap menu items in nav-menu-items container") {
+        val html = buildString {
+          appendHTML().html {
+            body {
+              navMenu(
+                selected = homePage,
+                pages = listOf(homePage, aboutPage),
+                navMenuSettings =
+                  NavMenuSettings(
+                    backgroundColor = "bg-white",
+                    navSelectedColor = "text-blue-600",
+                    navDefaultColor = "text-gray-700",
+                    isSticky = false,
+                    logo = Logo(imageUrl = "logo.png", width = 50, height = 50),
+                    blurNavBackground = false,
+                  ),
+              )
+            }
+          }
+        }
+
+        html shouldContain "nav-menu-items"
+        html shouldContain "flex flex-1 justify-evenly"
+      }
+
+      test("should not include grow spacer div") {
+        val html = buildString {
+          appendHTML().html {
+            body {
+              navMenu(
+                selected = homePage,
+                pages = listOf(homePage),
+                navMenuSettings =
+                  NavMenuSettings(
+                    backgroundColor = "bg-white",
+                    navSelectedColor = "text-blue-600",
+                    navDefaultColor = "text-gray-700",
+                    isSticky = false,
+                    logo = Logo(imageUrl = "logo.png", width = 50, height = 50),
+                    blurNavBackground = false,
+                  ),
+              )
+            }
+          }
+        }
+
+        html shouldNotContain "class=\"grow\""
       }
     }
   })

@@ -328,7 +328,11 @@ data class Site(
               navigation?.let { nav ->
                 navMenu(selected = page, navMenuSettings = nav, pages = pages)
               }
-              div(classes = contentClasses) { page.content(pageSettings, this) }
+              // Add fixed-nav-offset class when navigation is sticky
+              val offsetClass = if (navigation?.isSticky == true) "fixed-nav-offset" else ""
+              div(classes = "$contentClasses $offsetClass".trim()) {
+                page.content(pageSettings, this)
+              }
               // Only render footer if page provides one
               page.footer?.let { footerFn -> div { footerFn(pageSettings, this) } }
             }

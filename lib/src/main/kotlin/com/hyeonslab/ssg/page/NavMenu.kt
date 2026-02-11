@@ -69,7 +69,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
 
   nav(
     classes =
-      "$blur $sticky z-[255] ${navMenuSettings.fontFamily} flex w-full py-4 px-4 sm:px-8 md:px-${navMenuSettings.horizontalMargin} ${navMenuSettings.backgroundColor}"
+      "$blur $sticky z-[255] ${navMenuSettings.fontFamily} flex items-start w-full py-4 px-2 sm:px-6 md:px-${navMenuSettings.horizontalMargin} ${navMenuSettings.backgroundColor}"
   ) {
     a(href = "./index.html") {
       div {
@@ -80,27 +80,30 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
         }
       }
     }
-    val baseClasses =
-      "${Tailwind.Text.Size.sm.size} ${navMenuSettings.fontFamily} mx-1 md:mx-2 vertical-menu horizontal-menu md:text-base lg:text-lg"
 
-    pages.forEach { page ->
-      span(classes = baseClasses) {
-        adjustSelected(
-          page,
-          selected,
-          navMenuSettings.navSelectedColor,
-          navMenuSettings.navDefaultColor,
-        )
-        a(classes = "uppercase z-1 mx-1 md:mx-2 text-nowrap", href = "./${page.outputFilename}") {
-          +page.title
+    // Wrap menu items in a flex container for dynamic spacing
+    div(classes = "nav-menu-items flex flex-1 justify-evenly items-start") {
+      val baseClasses =
+        "${Tailwind.Text.Size.sm.size} ${navMenuSettings.fontFamily} vertical-menu horizontal-menu md:text-base lg:text-lg"
+
+      pages.forEach { page ->
+        span(classes = baseClasses) {
+          adjustSelected(
+            page,
+            selected,
+            navMenuSettings.navSelectedColor,
+            navMenuSettings.navDefaultColor,
+          )
+          a(classes = "uppercase z-1 text-nowrap", href = "./${page.outputFilename}") {
+            +page.title
+          }
         }
       }
     }
 
-    div(classes = "grow")
-
     // Social media links - wrapped in flex container for proper spacing
-    div(classes = "flex gap-4 py-4") {
+    // Add extra right padding to align with content margins at each breakpoint
+    div(classes = "flex gap-4 pr-2 sm:pr-2 md:pr-0") {
       navMenuSettings.instagram?.let { username ->
         val instagramUrl = "https://www.instagram.com/$username"
         a(

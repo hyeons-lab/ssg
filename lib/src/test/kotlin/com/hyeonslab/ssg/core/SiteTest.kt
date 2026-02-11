@@ -61,6 +61,15 @@ class SiteTest :
       defaultOgImage: String? = null,
       lang: String = "en",
       ogSiteName: String? = null,
+      navigation: NavMenuSettings? =
+        NavMenuSettings(
+          backgroundColor = "bg-gray-100",
+          navSelectedColor = "text-blue-600",
+          navDefaultColor = "text-gray-700",
+          isSticky = false,
+          logo = Logo(imageUrl = "logo.png", width = 50, height = 50),
+          blurNavBackground = false,
+        ),
     ): Site {
       return Site(
         outputPath = outputPath,
@@ -68,15 +77,7 @@ class SiteTest :
         version = "0.1.0-test",
         backgroundColor = "bg-white",
         pages = pages,
-        navigation =
-          NavMenuSettings(
-            backgroundColor = "bg-gray-100",
-            navSelectedColor = "text-blue-600",
-            navDefaultColor = "text-gray-700",
-            isSticky = false,
-            logo = Logo(imageUrl = "logo.png", width = 50, height = 50),
-            blurNavBackground = false,
-          ),
+        navigation = navigation,
         resources =
           ResourceConfig(
             staticFiles = emptyList(),
@@ -829,6 +830,70 @@ class SiteTest :
         // nav items should be <span>, not bare <h1> tags in the nav
         html shouldContain "<span"
         html shouldNotContain "<h1 class=\"text-sm"
+        File(outputPath).deleteRecursively()
+      }
+    }
+
+    context("fixed navigation offset") {
+      test("should apply fixed-nav-offset class when navigation is sticky") {
+        val outputPath = "build/test-fixed-nav-offset"
+        val site =
+          createTestSite(
+            outputPath,
+            pages = listOf(homePage),
+            navigation =
+              NavMenuSettings(
+                backgroundColor = "bg-white",
+                navSelectedColor = "text-blue-600",
+                navDefaultColor = "text-gray-700",
+                isSticky = true,
+                logo = Logo(imageUrl = "logo.png", width = 50, height = 50),
+                blurNavBackground = false,
+              ),
+          )
+
+        site.generateFiles()
+
+        val html = File("$outputPath/index.html").readText()
+        html shouldContain "fixed-nav-offset"
+
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should not apply fixed-nav-offset class when navigation is not sticky") {
+        val outputPath = "build/test-no-fixed-nav-offset"
+        val site =
+          createTestSite(
+            outputPath,
+            pages = listOf(homePage),
+            navigation =
+              NavMenuSettings(
+                backgroundColor = "bg-white",
+                navSelectedColor = "text-blue-600",
+                navDefaultColor = "text-gray-700",
+                isSticky = false,
+                logo = Logo(imageUrl = "logo.png", width = 50, height = 50),
+                blurNavBackground = false,
+              ),
+          )
+
+        site.generateFiles()
+
+        val html = File("$outputPath/index.html").readText()
+        html shouldNotContain "fixed-nav-offset"
+
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should not apply fixed-nav-offset class when navigation is null") {
+        val outputPath = "build/test-no-navigation"
+        val site = createTestSite(outputPath, pages = listOf(homePage), navigation = null)
+
+        site.generateFiles()
+
+        val html = File("$outputPath/index.html").readText()
+        html shouldNotContain "fixed-nav-offset"
+
         File(outputPath).deleteRecursively()
       }
     }
