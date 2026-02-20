@@ -22,6 +22,7 @@ import com.hyeonslab.ssg.page.navMenu
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.time.LocalDate
 import kotlinx.html.body
 import kotlinx.html.div
 import kotlinx.html.head
@@ -41,7 +42,7 @@ import kotlinx.html.title
  *   Use relative paths within your project directory (e.g., "build/generated_html"). Avoid absolute
  *   paths or system directories (e.g., /etc, /usr, /home) to prevent accidental file overwrites. Be
  *   cautious when using `File(outputPath).deleteRecursively()` - verify the path before deleting.
- * @property title Site title (used in HTML <title> tags)
+ * @property title Site title (used in HTML <title> tags when a page doesn't set its own)
  * @property version Site version for tracking (e.g., "1.0.0", "2024-02-08")
  * @property backgroundColor Tailwind background color class for page body
  * @property htmlClasses Tailwind classes for <html> element (default: empty)
@@ -52,6 +53,10 @@ import kotlinx.html.title
  * @property resources Static resources and stylesheets configuration
  * @property integrations Third-party integrations (analytics, tracking)
  * @property pageSettings Page-specific styling configuration
+ * @property baseUrl Canonical base URL of the site (e.g., "https://example.com") used for `<link
+ *   rel="canonical">`, Open Graph tags, and sitemap generation. No trailing slash.
+ * @property defaultOgImage Absolute URL of the default Open Graph image used when a page does not
+ *   set its own `ogImage` (e.g., "https://example.com/images/og-default.jpg")
  */
 data class Site(
   // Core configuration
@@ -79,6 +84,10 @@ data class Site(
 
   // Page-specific settings
   val pageSettings: PageSettings = PageSettings(),
+
+  // SEO configuration
+  val baseUrl: String? = null,
+  val defaultOgImage: String? = null,
 ) {
   init {
     // Validate CSS class strings to prevent HTML attribute injection
@@ -200,11 +209,62 @@ data class Site(
               attributes["class"] = htmlClasses
             }
             head {
-              title { +this@Site.title }
+              title { +(page.pageTitle ?: this@Site.title) }
               meta { charset = "utf-8" }
               meta {
                 name = "viewport"
                 content = "width=device-width, initial-scale=1.0"
+              }
+              // Per-page meta description
+              page.metaDescription?.let { desc ->
+                meta {
+                  name = "description"
+                  content = desc
+                }
+              }
+              // Canonical URL
+              baseUrl?.let { base ->
+                val path =
+                  if (page.outputFilename == "index.html") "/" else "/${page.outputFilename}"
+                link {
+                  rel = "canonical"
+                  href = "$base$path"
+                }
+              }
+              // Open Graph + Twitter Card (requires baseUrl for absolute URLs)
+              baseUrl?.let { base ->
+                val path =
+                  if (page.outputFilename == "index.html") "/" else "/${page.outputFilename}"
+                val canonicalUrl = "$base$path"
+                val ogTitle = page.pageTitle ?: this@Site.title
+                meta {
+                  attributes["property"] = "og:type"
+                  content = "website"
+                }
+                meta {
+                  attributes["property"] = "og:title"
+                  content = ogTitle
+                }
+                page.metaDescription?.let { desc ->
+                  meta {
+                    attributes["property"] = "og:description"
+                    content = desc
+                  }
+                }
+                meta {
+                  attributes["property"] = "og:url"
+                  content = canonicalUrl
+                }
+                (page.ogImage ?: defaultOgImage)?.let { img ->
+                  meta {
+                    attributes["property"] = "og:image"
+                    content = img
+                  }
+                }
+                meta {
+                  name = "twitter:card"
+                  content = "summary_large_image"
+                }
               }
               // Include local stylesheets
               resources.localStylesheets.forEach { cssPath ->
@@ -250,5 +310,44 @@ data class Site(
         }
       error("Failed to generate ${failures.size} file(s):\n$errorMessage")
     }
+  }
+
+  /**
+   * Generates a `sitemap.xml` file in the output directory listing all page URLs.
+   *
+   * Only runs when [baseUrl] is set on this site. If [baseUrl] is null this method returns without
+   * creating any file, so it is safe to call unconditionally.
+   *
+   * The sitemap uses today's date as the `<lastmod>` value for every URL.
+   *
+   * Example:
+   * ```kotlin
+   * val site = site {
+   *     outputPath = "build/generated_html"
+   *     baseUrl = "https://example.com"
+   *     pages = listOf(HomePage, AboutPage)
+   * }
+   * File(outputPath).deleteRecursively()
+   * site.generateFiles()
+   * site.generateSitemap()  // writes build/generated_html/sitemap.xml
+   * site.copyResources()
+   * ```
+   */
+  fun generateSitemap() {
+    val base = baseUrl ?: return
+    val today = LocalDate.now()
+    val xml = buildString {
+      appendLine("""<?xml version="1.0" encoding="UTF-8"?>""")
+      appendLine("""<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">""")
+      pages.forEach { page ->
+        val path = if (page.outputFilename == "index.html") "/" else "/${page.outputFilename}"
+        appendLine("  <url>")
+        appendLine("    <loc>$base$path</loc>")
+        appendLine("    <lastmod>$today</lastmod>")
+        appendLine("  </url>")
+      }
+      appendLine("</urlset>")
+    }
+    File("$outputPath/sitemap.xml").writeText(xml)
   }
 }

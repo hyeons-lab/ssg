@@ -141,6 +141,12 @@ class SiteBuilder {
   var pages: List<Page>? = null
   var pageSettings: PageSettings = PageSettings()
 
+  /** Canonical base URL of the site (no trailing slash), e.g. `"https://example.com"`. */
+  var baseUrl: String? = null
+
+  /** Absolute URL of the default Open Graph image, e.g. `"https://example.com/images/og.jpg"`. */
+  var defaultOgImage: String? = null
+
   private var navigationBuilder: NavigationBuilder? = null
   private var resourcesBuilder: ResourcesBuilder? = null
   private var integrationsBuilder: IntegrationsBuilder? = null
@@ -217,6 +223,8 @@ class SiteBuilder {
       resources = resourcesBuilder?.build() ?: ResourceConfig(),
       integrations = integrationsBuilder?.build() ?: IntegrationConfig(),
       pageSettings = pageSettings,
+      baseUrl = baseUrl,
+      defaultOgImage = defaultOgImage,
     )
   }
 }
