@@ -60,6 +60,7 @@ class SiteTest :
       baseUrl: String? = null,
       defaultOgImage: String? = null,
       lang: String = "en",
+      ogSiteName: String? = null,
     ): Site {
       return Site(
         outputPath = outputPath,
@@ -87,6 +88,7 @@ class SiteTest :
         baseUrl = baseUrl,
         defaultOgImage = defaultOgImage,
         lang = lang,
+        ogSiteName = ogSiteName,
       )
     }
 
@@ -585,13 +587,28 @@ class SiteTest :
         File(outputPath).deleteRecursively()
       }
 
-      test("should use og:site_name from site title") {
+      test("should use site title as og:site_name when ogSiteName is null") {
         val outputPath = "build/test-seo-sitename"
         val site = createTestSite(outputPath, baseUrl = "https://example.com")
         site.generateFiles()
         val html = File("$outputPath/index.html").readText()
         html shouldContain "og:site_name"
         html shouldContain "Test Site"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should use ogSiteName when set instead of site title") {
+        val outputPath = "build/test-seo-sitename-custom"
+        val site =
+          createTestSite(
+            outputPath,
+            baseUrl = "https://example.com",
+            ogSiteName = "My Brand",
+          )
+        site.generateFiles()
+        val html = File("$outputPath/index.html").readText()
+        html shouldContain "og:site_name"
+        html shouldContain "My Brand"
         File(outputPath).deleteRecursively()
       }
     }

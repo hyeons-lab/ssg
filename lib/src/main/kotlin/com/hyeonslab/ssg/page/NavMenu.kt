@@ -66,12 +66,10 @@ import kotlinx.html.style
 fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSettings) {
   val sticky = if (navMenuSettings.isSticky) "sticky" else ""
   val blur = if (navMenuSettings.blurNavBackground) "backdrop-blur-md" else ""
-  val leftMargin = "ms-4 sm:ms-8 md:ms-${navMenuSettings.horizontalMargin}"
-  val rightMargin = "me-4 sm:me-8 md:me-${navMenuSettings.horizontalMargin}"
 
   nav(
     classes =
-      "$blur $sticky z-[255] ${navMenuSettings.fontFamily} flex w-full py-4 $leftMargin $rightMargin ${navMenuSettings.backgroundColor}"
+      "$blur $sticky z-[255] ${navMenuSettings.fontFamily} flex w-full py-4 px-4 sm:px-8 md:px-${navMenuSettings.horizontalMargin} ${navMenuSettings.backgroundColor}"
   ) {
     a(href = "./index.html") {
       div {
@@ -83,7 +81,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
       }
     }
     val baseClasses =
-      "${Tailwind.Text.Size.sm} ${navMenuSettings.fontFamily} mx-1 md:mx-2 vertical-menu horizontal-menu md:text-base lg:text-lg"
+      "${Tailwind.Text.Size.sm.size} ${navMenuSettings.fontFamily} mx-1 md:mx-2 vertical-menu horizontal-menu md:text-base lg:text-lg"
 
     pages.forEach { page ->
       span(classes = baseClasses) {
@@ -108,7 +106,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
         a(
           href = instagramUrl,
           classes =
-            "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm} md:text-base lg:text-lg",
+            "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm.size} md:text-base lg:text-lg",
         ) {
           i(classes = "fa-brands fa-instagram")
         }
@@ -117,7 +115,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
         a(
           href = "mailto:$email",
           classes =
-            "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm} md:text-base lg:text-lg",
+            "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm.size} md:text-base lg:text-lg",
         ) {
           i(classes = "fa-regular fa-envelope")
         }

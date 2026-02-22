@@ -60,6 +60,8 @@ import kotlinx.html.unsafe
  * @property defaultOgImage Absolute URL of the default Open Graph image used when a page does not
  *   set its own `ogImage` (e.g., "https://example.com/images/og-default.jpg")
  * @property lang BCP-47 language code for the `<html lang>` attribute (default: `"en"`)
+ * @property ogSiteName Brand name for the `og:site_name` meta tag. When null, falls back to
+ *   [title]. Use this to specify a shorter or distinct brand name separate from the page title.
  */
 data class Site(
   // Core configuration
@@ -92,6 +94,7 @@ data class Site(
   val baseUrl: String? = null,
   val defaultOgImage: String? = null,
   val lang: String = "en",
+  val ogSiteName: String? = null,
 ) {
   init {
     // Validate CSS class strings to prevent HTML attribute injection
@@ -248,7 +251,7 @@ data class Site(
                 }
                 meta {
                   attributes["property"] = "og:site_name"
-                  content = this@Site.title
+                  content = this@Site.ogSiteName ?: this@Site.title
                 }
                 meta {
                   attributes["property"] = "og:title"

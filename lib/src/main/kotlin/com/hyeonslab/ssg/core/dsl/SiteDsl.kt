@@ -150,6 +150,12 @@ class SiteBuilder {
   /** BCP-47 language code for the `<html lang>` attribute (default: `"en"`). */
   var lang: String = "en"
 
+  /**
+   * Brand name for `og:site_name`. When null, falls back to [title].
+   * Set this when the brand name differs from the site title (e.g., "Acme, Inc." vs a page title).
+   */
+  var ogSiteName: String? = null
+
   private var navigationBuilder: NavigationBuilder? = null
   private var resourcesBuilder: ResourcesBuilder? = null
   private var integrationsBuilder: IntegrationsBuilder? = null
@@ -229,6 +235,7 @@ class SiteBuilder {
       baseUrl = baseUrl,
       defaultOgImage = defaultOgImage,
       lang = lang,
+      ogSiteName = ogSiteName,
     )
   }
 }
