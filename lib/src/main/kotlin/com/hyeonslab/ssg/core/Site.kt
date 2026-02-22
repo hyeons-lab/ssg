@@ -29,8 +29,10 @@ import kotlinx.html.head
 import kotlinx.html.html
 import kotlinx.html.link
 import kotlinx.html.meta
+import kotlinx.html.script
 import kotlinx.html.stream.appendHTML
 import kotlinx.html.title
+import kotlinx.html.unsafe
 
 /**
  * Main configuration for a static site generator.
@@ -57,6 +59,7 @@ import kotlinx.html.title
  *   rel="canonical">`, Open Graph tags, and sitemap generation. No trailing slash.
  * @property defaultOgImage Absolute URL of the default Open Graph image used when a page does not
  *   set its own `ogImage` (e.g., "https://example.com/images/og-default.jpg")
+ * @property lang BCP-47 language code for the `<html lang>` attribute (default: `"en"`)
  */
 data class Site(
   // Core configuration
@@ -88,6 +91,7 @@ data class Site(
   // SEO configuration
   val baseUrl: String? = null,
   val defaultOgImage: String? = null,
+  val lang: String = "en",
 ) {
   init {
     // Validate CSS class strings to prevent HTML attribute injection
@@ -205,6 +209,7 @@ data class Site(
       val result = runCatching {
         val generatedHtml = buildString {
           appendHTML().html {
+            attributes["lang"] = this@Site.lang
             if (htmlClasses.isNotEmpty()) {
               attributes["class"] = htmlClasses
             }
@@ -242,6 +247,10 @@ data class Site(
                   content = "website"
                 }
                 meta {
+                  attributes["property"] = "og:site_name"
+                  content = this@Site.title
+                }
+                meta {
                   attributes["property"] = "og:title"
                   content = ogTitle
                 }
@@ -265,6 +274,10 @@ data class Site(
                   name = "twitter:card"
                   content = "summary_large_image"
                 }
+              }
+              // JSON-LD structured data
+              page.structuredData?.let { json ->
+                script(type = "application/ld+json") { unsafe { +json } }
               }
               // Include local stylesheets
               resources.localStylesheets.forEach { cssPath ->
@@ -349,5 +362,24 @@ data class Site(
       appendLine("</urlset>")
     }
     File("$outputPath/sitemap.xml").writeText(xml)
+  }
+
+  /**
+   * Generates a `robots.txt` file in the output directory.
+   *
+   * Only runs when [baseUrl] is set on this site. If [baseUrl] is null this method returns without
+   * creating any file, so it is safe to call unconditionally.
+   *
+   * The generated file allows all user agents and includes a `Sitemap:` directive pointing to
+   * `sitemap.xml` at the base URL.
+   */
+  fun generateRobotsTxt() {
+    val base = baseUrl ?: return
+    val txt = buildString {
+      appendLine("User-agent: *")
+      appendLine("Allow: /")
+      appendLine("Sitemap: $base/sitemap.xml")
+    }
+    File("$outputPath/robots.txt").writeText(txt)
   }
 }

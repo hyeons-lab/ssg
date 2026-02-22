@@ -147,6 +147,9 @@ class SiteBuilder {
   /** Absolute URL of the default Open Graph image, e.g. `"https://example.com/images/og.jpg"`. */
   var defaultOgImage: String? = null
 
+  /** BCP-47 language code for the `<html lang>` attribute (default: `"en"`). */
+  var lang: String = "en"
+
   private var navigationBuilder: NavigationBuilder? = null
   private var resourcesBuilder: ResourcesBuilder? = null
   private var integrationsBuilder: IntegrationsBuilder? = null
@@ -225,6 +228,7 @@ class SiteBuilder {
       pageSettings = pageSettings,
       baseUrl = baseUrl,
       defaultOgImage = defaultOgImage,
+      lang = lang,
     )
   }
 }
