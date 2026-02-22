@@ -141,6 +141,21 @@ class SiteBuilder {
   var pages: List<Page>? = null
   var pageSettings: PageSettings = PageSettings()
 
+  /** Canonical base URL of the site (no trailing slash), e.g. `"https://example.com"`. */
+  var baseUrl: String? = null
+
+  /** Absolute URL of the default Open Graph image, e.g. `"https://example.com/images/og.jpg"`. */
+  var defaultOgImage: String? = null
+
+  /** BCP-47 language code for the `<html lang>` attribute (default: `"en"`). */
+  var lang: String = "en"
+
+  /**
+   * Brand name for `og:site_name`. When null, falls back to [title].
+   * Set this when the brand name differs from the site title (e.g., "Acme, Inc." vs a page title).
+   */
+  var ogSiteName: String? = null
+
   private var navigationBuilder: NavigationBuilder? = null
   private var resourcesBuilder: ResourcesBuilder? = null
   private var integrationsBuilder: IntegrationsBuilder? = null
@@ -217,6 +232,10 @@ class SiteBuilder {
       resources = resourcesBuilder?.build() ?: ResourceConfig(),
       integrations = integrationsBuilder?.build() ?: IntegrationConfig(),
       pageSettings = pageSettings,
+      baseUrl = baseUrl,
+      defaultOgImage = defaultOgImage,
+      lang = lang,
+      ogSiteName = ogSiteName,
     )
   }
 }

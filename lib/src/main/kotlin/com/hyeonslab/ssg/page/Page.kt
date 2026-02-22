@@ -24,11 +24,29 @@ import kotlinx.html.FlowContent
  * @property outputFilename Output HTML filename (e.g., "index.html", "about.html")
  * @property content Function to generate page content
  * @property footer Optional function to generate page footer (defaults to null)
+ * @property pageTitle Optional HTML `<title>` for this page; falls back to the site-level title
+ * @property metaDescription Optional `<meta name="description">` content (150–160 chars
+ *   recommended)
+ * @property ogImage Optional absolute URL for `<meta property="og:image">`; falls back to the
+ *   site-level `defaultOgImage`
  */
 interface Page {
   val title: String
   val outputFilename: String
   val content: (PageSettings, FlowContent) -> Unit
   val footer: ((PageSettings, FlowContent) -> Unit)?
+    get() = null
+
+  val pageTitle: String?
+    get() = null
+
+  val metaDescription: String?
+    get() = null
+
+  val ogImage: String?
+    get() = null
+
+  /** Optional JSON-LD structured data (raw JSON string) to embed in a `<script type="application/ld+json">` tag. */
+  val structuredData: String?
     get() = null
 }

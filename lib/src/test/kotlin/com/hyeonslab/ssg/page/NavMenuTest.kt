@@ -446,8 +446,8 @@ class NavMenuTest :
           }
         }
 
-        html shouldContain "ms-16"
-        html shouldContain "me-16"
+        html shouldContain "px-4"
+        html shouldContain "md:px-16"
       }
 
       test("should apply custom horizontal margins") {
@@ -472,8 +472,8 @@ class NavMenuTest :
           }
         }
 
-        html shouldContain "ms-8"
-        html shouldContain "me-8"
+        html shouldContain "px-4"
+        html shouldContain "md:px-8"
       }
     }
   })

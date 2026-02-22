@@ -20,9 +20,9 @@ import com.hyeonslab.ssg.utils.Tailwind
 import kotlinx.html.BODY
 import kotlinx.html.a
 import kotlinx.html.div
-import kotlinx.html.h1
 import kotlinx.html.i
 import kotlinx.html.img
+import kotlinx.html.span
 import kotlinx.html.nav
 import kotlinx.html.style
 
@@ -66,8 +66,6 @@ import kotlinx.html.style
 fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSettings) {
   val sticky = if (navMenuSettings.isSticky) "sticky" else ""
   val blur = if (navMenuSettings.blurNavBackground) "backdrop-blur-md" else ""
-  val leftMargin = "ms-4 sm:ms-8 md:ms-${navMenuSettings.horizontalMargin}"
-  val rightMargin = "me-4 sm:me-8 md:me-${navMenuSettings.horizontalMargin}"
 
   nav(
     classes =
@@ -76,17 +74,17 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
     a(href = "./index.html") {
       div {
         style = "height: ${navMenuSettings.logo.height}px; width: ${navMenuSettings.logo.width}px;"
-        img(src = navMenuSettings.logo.imageUrl) {
+        img(src = navMenuSettings.logo.imageUrl, alt = navMenuSettings.logo.altText) {
           style =
             "height: ${navMenuSettings.logo.height}px; width: ${navMenuSettings.logo.width}px;"
         }
       }
     }
     val baseClasses =
-      "${Tailwind.Text.Size.sm} ${navMenuSettings.fontFamily} mx-1 md:mx-2 vertical-menu horizontal-menu md:text-base lg:text-lg"
+      "${Tailwind.Text.Size.sm.size} ${navMenuSettings.fontFamily} mx-1 md:mx-2 vertical-menu horizontal-menu md:text-base lg:text-lg"
 
     pages.forEach { page ->
-      h1(classes = baseClasses) {
+      span(classes = baseClasses) {
         adjustSelected(
           page,
           selected,
@@ -108,7 +106,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
         a(
           href = instagramUrl,
           classes =
-            "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm} md:text-base lg:text-lg",
+            "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm.size} md:text-base lg:text-lg",
         ) {
           i(classes = "fa-brands fa-instagram")
         }
@@ -117,7 +115,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
         a(
           href = "mailto:$email",
           classes =
-            "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm} md:text-base lg:text-lg",
+            "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm.size} md:text-base lg:text-lg",
         ) {
           i(classes = "fa-regular fa-envelope")
         }
