@@ -26,18 +26,21 @@
 
 ### `Site.kt`
 - Added `val lang: String = "en"` — sets `<html lang="...">` attribute on every page
-- Added `og:site_name` meta tag (uses site-level `title`) after `og:type` in the OG block
+- Added `val ogSiteName: String? = null` — brand name for `og:site_name`; falls back to `title` when null
+- Added `og:site_name` meta tag using `ogSiteName ?: title` after `og:type` in the OG block
 - Added JSON-LD `<script>` emission in `generateFiles()` when `page.structuredData != null`
 - Added `generateRobotsTxt()` — writes `robots.txt` with `User-agent: *`, `Allow: /`, and `Sitemap:` directive; no-ops when `baseUrl` is null
 
 ### `SiteDsl.kt`
 - Added `var lang: String = "en"` to `SiteBuilder`
-- Pass `lang` through in `build()`
+- Added `var ogSiteName: String? = null` to `SiteBuilder`
+- Pass `lang` and `ogSiteName` through in `build()`
 
 ### `NavMenu.kt`
 - Changed nav item element from `h1` to `span` — each page link was an `<h1>`, breaking document heading hierarchy
 - Added `alt = navMenuSettings.logo.altText` to logo `img`
-- Fixed pre-existing bug: `leftMargin`/`rightMargin` variables were defined but not applied to the `nav` element classes; replaced `px-${horizontalMargin}` with `$leftMargin $rightMargin`
+- Fixed `${Tailwind.Text.Size.sm}` → `${Tailwind.Text.Size.sm.size}` in three places — the enum's `toString()` returns `"sm"` (the object name), not `"text-sm"`; `.size` is the correct accessor
+- Reverted the earlier margin fix: nav padding is `px-4 sm:px-8 md:px-${horizontalMargin}` — applying `ms-`/`me-` margin classes to a `w-full` element causes horizontal overflow
 
 ### `HtmlExtensions.kt`
 - Changed `fun H1.adjustSelected(...)` to `fun CommonAttributeGroupFacade.adjustSelected(...)` to support `span` receiver
@@ -50,14 +53,17 @@
 - Added `altText` parameter to `NavigationBuilder.logo(String, Int, Int)` convenience function
 
 ### `SiteTest.kt`
-- Extended `createTestSite` helper with `baseUrl`, `defaultOgImage`, `lang` params
-- Added 14 new tests:
-  - SEO meta tags: per-page description, per-page title, canonical + OG block, no OG when no baseUrl, og:site_name
+- Extended `createTestSite` helper with `baseUrl`, `defaultOgImage`, `lang`, `ogSiteName` params
+- Added 15 new tests:
+  - SEO meta tags: per-page description, per-page title, canonical + OG block, no OG when no baseUrl, og:site_name falls back to title, og:site_name uses explicit `ogSiteName` when set
   - Lang attribute: default `en`, custom lang
   - Structured data: JSON-LD emitted when set, absent when null
   - `generateSitemap()`: produces correct URLs, no-ops without baseUrl
   - `generateRobotsTxt()`: correct content, no-ops without baseUrl
   - Nav heading hierarchy: `<span>` present, no `<h1 class="text-sm">`
+
+### `NavMenuTest.kt`
+- Updated horizontal margin tests to assert `px-4` and `md:px-{margin}` (padding) instead of `ms-{margin}` / `me-{margin}` (margin)
 
 ## Decisions
 
@@ -76,6 +82,12 @@
 2026-02-21T22:06-08:00 `adjustSelected` receiver widened to `CommonAttributeGroupFacade` rather than creating a duplicate extension — avoids code duplication and works for any HTML element that accepts class attributes.
 
 2026-02-21T22:06-08:00 Fixed the pre-existing nav margin bug in the same PR since fixing it was necessary to make the existing tests pass; the bug was that `leftMargin`/`rightMargin` were computed but never applied.
+
+2026-02-21T22:43-08:00 Reverted the margin fix: applying `ms-`/`me-` to a `w-full` nav causes horizontal overflow on mobile. The correct fix is padding (`px-`), which stays inside the element's box. Tests updated to match.
+
+2026-02-21T22:43-08:00 `ogSiteName` added as a separate nullable property on `Site` and `SiteBuilder` — a site's `title` is often a full page title or tagline; the `og:site_name` should be a stable brand name. Defaults to `title` for backward compatibility.
+
+2026-02-21T22:43-08:00 `Tailwind.Text.Size.sm` is a `data object`; its `toString()` returns the object name `"sm"`, not the Tailwind class `"text-sm"`. All usages in `NavMenu.kt` corrected to `.size`.
 
 ## Commits
 
