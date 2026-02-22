@@ -20,9 +20,9 @@ import com.hyeonslab.ssg.utils.Tailwind
 import kotlinx.html.BODY
 import kotlinx.html.a
 import kotlinx.html.div
-import kotlinx.html.h1
 import kotlinx.html.i
 import kotlinx.html.img
+import kotlinx.html.span
 import kotlinx.html.nav
 import kotlinx.html.style
 
@@ -71,12 +71,12 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
 
   nav(
     classes =
-      "$blur $sticky z-[255] ${navMenuSettings.fontFamily} flex w-full py-4 px-4 sm:px-8 md:px-${navMenuSettings.horizontalMargin} ${navMenuSettings.backgroundColor}"
+      "$blur $sticky z-[255] ${navMenuSettings.fontFamily} flex w-full py-4 $leftMargin $rightMargin ${navMenuSettings.backgroundColor}"
   ) {
     a(href = "./index.html") {
       div {
         style = "height: ${navMenuSettings.logo.height}px; width: ${navMenuSettings.logo.width}px;"
-        img(src = navMenuSettings.logo.imageUrl) {
+        img(src = navMenuSettings.logo.imageUrl, alt = navMenuSettings.logo.altText) {
           style =
             "height: ${navMenuSettings.logo.height}px; width: ${navMenuSettings.logo.width}px;"
         }
@@ -86,7 +86,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
       "${Tailwind.Text.Size.sm} ${navMenuSettings.fontFamily} mx-1 md:mx-2 vertical-menu horizontal-menu md:text-base lg:text-lg"
 
     pages.forEach { page ->
-      h1(classes = baseClasses) {
+      span(classes = baseClasses) {
         adjustSelected(
           page,
           selected,

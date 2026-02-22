@@ -146,7 +146,7 @@ data class NavMenuSettings(
  * @see NavMenuSettings
  */
 @Serializable
-data class Logo(val imageUrl: String, val width: Int, val height: Int) {
+data class Logo(val imageUrl: String, val width: Int, val height: Int, val altText: String = "") {
   init {
     // Validate logo URL to prevent XSS injection via src attribute
     require(

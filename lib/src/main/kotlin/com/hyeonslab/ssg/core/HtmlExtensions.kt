@@ -16,7 +16,7 @@
 package com.hyeonslab.ssg.core
 
 import com.hyeonslab.ssg.page.Page
-import kotlinx.html.H1
+import kotlinx.html.CommonAttributeGroupFacade
 import kotlinx.html.HEAD
 import kotlinx.html.classes
 import kotlinx.html.script
@@ -87,10 +87,10 @@ fun HEAD.googleTag(tag: String = "") {
  * Applies color classes to a navigation menu item based on whether it's the currently selected
  * page.
  *
- * This helper function adds Tailwind CSS color classes to h1 elements in the navigation menu to
- * visually distinguish the current page from other navigation links.
+ * This helper function adds Tailwind CSS color classes to navigation menu elements to visually
+ * distinguish the current page from other navigation links.
  *
- * @param selection The page that this h1 element represents
+ * @param selection The page that this element represents
  * @param selected The currently selected/active page
  * @param selectedColor Tailwind color class for the selected state (e.g., "text-blue-600")
  * @param unselectedColor Tailwind color class for the unselected state (e.g., "text-gray-700")
@@ -108,7 +108,7 @@ fun HEAD.googleTag(tag: String = "") {
  * }
  * ```
  */
-fun H1.adjustSelected(
+fun CommonAttributeGroupFacade.adjustSelected(
   selection: Page,
   selected: Page,
   selectedColor: String,
