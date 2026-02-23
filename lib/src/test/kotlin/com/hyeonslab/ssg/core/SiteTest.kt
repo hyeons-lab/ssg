@@ -600,11 +600,7 @@ class SiteTest :
       test("should use ogSiteName when set instead of site title") {
         val outputPath = "build/test-seo-sitename-custom"
         val site =
-          createTestSite(
-            outputPath,
-            baseUrl = "https://example.com",
-            ogSiteName = "My Brand",
-          )
+          createTestSite(outputPath, baseUrl = "https://example.com", ogSiteName = "My Brand")
         site.generateFiles()
         val html = File("$outputPath/index.html").readText()
         html shouldContain "og:site_name"

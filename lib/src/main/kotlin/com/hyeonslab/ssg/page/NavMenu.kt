@@ -22,8 +22,8 @@ import kotlinx.html.a
 import kotlinx.html.div
 import kotlinx.html.i
 import kotlinx.html.img
-import kotlinx.html.span
 import kotlinx.html.nav
+import kotlinx.html.span
 import kotlinx.html.style
 
 /**

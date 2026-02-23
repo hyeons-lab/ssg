@@ -46,7 +46,10 @@ interface Page {
   val ogImage: String?
     get() = null
 
-  /** Optional JSON-LD structured data (raw JSON string) to embed in a `<script type="application/ld+json">` tag. */
+  /**
+   * Optional JSON-LD structured data (raw JSON string) to embed in a `<script
+   * type="application/ld+json">` tag.
+   */
   val structuredData: String?
     get() = null
 }

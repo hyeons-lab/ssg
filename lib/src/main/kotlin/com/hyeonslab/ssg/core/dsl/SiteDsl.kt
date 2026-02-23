@@ -151,8 +151,8 @@ class SiteBuilder {
   var lang: String = "en"
 
   /**
-   * Brand name for `og:site_name`. When null, falls back to [title].
-   * Set this when the brand name differs from the site title (e.g., "Acme, Inc." vs a page title).
+   * Brand name for `og:site_name`. When null, falls back to [title]. Set this when the brand name
+   * differs from the site title (e.g., "Acme, Inc." vs a page title).
    */
   var ogSiteName: String? = null
 
