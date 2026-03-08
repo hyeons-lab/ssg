@@ -120,6 +120,16 @@
 - Renamed "should apply default horizontal margins" → "should apply default horizontal padding"
 - Renamed "should apply custom horizontal margins" → "should apply custom horizontal padding"
 
+### `HtmlExtensions.kt` (second review round)
+- Fixed KDoc example: `h1 { adjustSelected(...) }` → `span { adjustSelected(...) }`
+
+### `Site.kt` (second review round)
+- Updated `generateSitemap()` KDoc example comment to clarify `generateFiles()` is no longer a prerequisite
+
+### `SiteTest.kt` (second review round)
+- Added `context("SEO field validation")` with 5 tests covering: invalid `lang` rejected, valid lang values accepted, `baseUrl` trailing slash rejected, `baseUrl` injection chars rejected, `defaultOgImage` injection chars rejected
+- Added test: `</script>` in `structuredData` is escaped to `<\/script>` in output
+
 ## Commits
 
 6d1bc9e — docs: add devlog and plan for feat/seo-meta-tags
@@ -131,4 +141,5 @@ d6bb93b — fix: use text-sm class, add ogSiteName property, fix nav margin test
 c6fbc7b — docs: update devlog with fix commit details and decisions
 a5ab80d — style: apply ktfmt formatting to SEO feature files
 7fb1bc6 — chore: update Gradle wrapper to 9.3.1
-HEAD — fix: address code review issues in SEO feature
+e7062c6 — fix: address code review issues in SEO feature
+HEAD — fix: address second code review round

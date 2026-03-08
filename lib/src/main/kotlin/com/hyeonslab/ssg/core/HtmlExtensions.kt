@@ -97,7 +97,7 @@ fun HEAD.googleTag(tag: String = "") {
  *
  * Example:
  * ```kotlin
- * h1 {
+ * span {
  *     adjustSelected(
  *         selection = aboutPage,
  *         selected = currentPage,

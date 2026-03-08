@@ -195,6 +195,53 @@ class SiteTest :
       }
     }
 
+    context("SEO field validation") {
+      test("should reject invalid lang values") {
+        shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test", listOf(homePage)).copy(lang = "<script>")
+          }
+          .message shouldContain "lang contains an invalid BCP-47 language tag"
+
+        shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test", listOf(homePage)).copy(lang = "")
+          }
+          .message shouldContain "lang contains an invalid BCP-47 language tag"
+      }
+
+      test("should accept valid lang values") {
+        listOf("en", "es", "zh-Hant", "pt-BR", "sr-Latn").forEach { lang ->
+          createTestSite("build/test", listOf(homePage)).copy(lang = lang).lang shouldBe lang
+        }
+      }
+
+      test("should reject baseUrl with trailing slash") {
+        shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test", listOf(homePage)).copy(baseUrl = "https://example.com/")
+          }
+          .message shouldContain "must not have a trailing slash"
+      }
+
+      test("should reject baseUrl with injection characters") {
+        shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test", listOf(homePage)).copy(baseUrl = "https://example.com\"")
+          }
+          .message shouldContain "baseUrl contains invalid characters"
+
+        shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test", listOf(homePage)).copy(baseUrl = "https://example.com<x>")
+          }
+          .message shouldContain "baseUrl contains invalid characters"
+      }
+
+      test("should reject defaultOgImage with injection characters") {
+        shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test", listOf(homePage))
+              .copy(defaultOgImage = "https://example.com/og.jpg\"")
+          }
+          .message shouldContain "defaultOgImage contains invalid characters"
+      }
+    }
+
     context("copyResources()") {
       test("should copy resources successfully") {
         // Create a test resource file
@@ -692,6 +739,27 @@ class SiteTest :
         val html = File("$outputPath/schema.html").readText()
         html shouldContain "application/ld+json"
         html shouldContain """{"@context":"https://schema.org""""
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should escape </script> in structuredData to prevent tag break") {
+        val jsonWithScript =
+          """{"@context":"https://schema.org","name":"</script><script>alert(1)</script>"}"""
+        val pageWithDangerousSchema =
+          object : Page {
+            override val title = "Dangerous Schema Page"
+            override val outputFilename = "dangerous-schema.html"
+            override val structuredData = jsonWithScript
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { +"content" }
+            }
+          }
+        val outputPath = "build/test-jsonld-escape"
+        val site = createTestSite(outputPath, pages = listOf(pageWithDangerousSchema))
+        site.generateFiles()
+        val html = File("$outputPath/dangerous-schema.html").readText()
+        html shouldNotContain "</script><script>"
+        html shouldContain "<\\/script>"
         File(outputPath).deleteRecursively()
       }
 

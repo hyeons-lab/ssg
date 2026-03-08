@@ -366,8 +366,8 @@ data class Site(
    *     pages = listOf(HomePage, AboutPage)
    * }
    * File(outputPath).deleteRecursively()
-   * site.generateFiles()
-   * site.generateSitemap()  // writes build/generated_html/sitemap.xml
+   * site.generateFiles()   // optional — generateSitemap() creates the directory itself
+   * site.generateSitemap() // writes build/generated_html/sitemap.xml
    * site.copyResources()
    * ```
    */
