@@ -142,4 +142,5 @@ c6fbc7b — docs: update devlog with fix commit details and decisions
 a5ab80d — style: apply ktfmt formatting to SEO feature files
 7fb1bc6 — chore: update Gradle wrapper to 9.3.1
 e7062c6 — fix: address code review issues in SEO feature
-HEAD — fix: address second code review round
+cbc9c54 — fix: address second code review round
+HEAD — ci: add Maven Central publish workflow
