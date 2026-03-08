@@ -41,30 +41,29 @@ jobs:
           MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
         run: |
           echo "=== Secret presence ==="
-          [ -n "$SIGNING_KEY_ID" ]         && echo "SIGNING_KEY_ID:         set (${#SIGNING_KEY_ID} chars)"         || echo "SIGNING_KEY_ID:         MISSING OR EMPTY"
-          [ -n "$SIGNING_KEY" ]            && echo "SIGNING_KEY:            set (${#SIGNING_KEY} chars)"            || echo "SIGNING_KEY:            MISSING OR EMPTY"
-          [ -n "$SIGNING_KEY_PASSWORD" ]   && echo "SIGNING_KEY_PASSWORD:   set (${#SIGNING_KEY_PASSWORD} chars)"   || echo "SIGNING_KEY_PASSWORD:   MISSING OR EMPTY"
-          [ -n "$MAVEN_CENTRAL_USERNAME" ] && echo "MAVEN_CENTRAL_USERNAME: set (${#MAVEN_CENTRAL_USERNAME} chars)" || echo "MAVEN_CENTRAL_USERNAME: MISSING OR EMPTY"
-          [ -n "$MAVEN_CENTRAL_PASSWORD" ] && echo "MAVEN_CENTRAL_PASSWORD: set (${#MAVEN_CENTRAL_PASSWORD} chars)" || echo "MAVEN_CENTRAL_PASSWORD: MISSING OR EMPTY"
+          [ -n "$SIGNING_KEY_ID" ]         && echo "SIGNING_KEY_ID:         set" || echo "SIGNING_KEY_ID:         MISSING OR EMPTY"
+          [ -n "$SIGNING_KEY" ]            && echo "SIGNING_KEY:            set" || echo "SIGNING_KEY:            MISSING OR EMPTY"
+          [ -n "$SIGNING_KEY_PASSWORD" ]   && echo "SIGNING_KEY_PASSWORD:   set" || echo "SIGNING_KEY_PASSWORD:   MISSING OR EMPTY"
+          [ -n "$MAVEN_CENTRAL_USERNAME" ] && echo "MAVEN_CENTRAL_USERNAME: set" || echo "MAVEN_CENTRAL_USERNAME: MISSING OR EMPTY"
+          [ -n "$MAVEN_CENTRAL_PASSWORD" ] && echo "MAVEN_CENTRAL_PASSWORD: set" || echo "MAVEN_CENTRAL_PASSWORD: MISSING OR EMPTY"
 
           echo ""
           echo "=== SIGNING_KEY_ID format ==="
           if [ -n "$SIGNING_KEY_ID" ]; then
-            echo "$SIGNING_KEY_ID" | grep -qE '^[0-9A-Fa-f]{8}$' \
+            [[ "$SIGNING_KEY_ID" =~ ^[0-9A-Fa-f]{8}$ ]] \
               && echo "format: OK (8 hex chars)" \
-              || echo "format: UNEXPECTED — expected 8 hex characters (e.g. AB12CD34), got ${#SIGNING_KEY_ID} chars"
+              || echo "format: UNEXPECTED — expected exactly 8 hex characters (e.g. AB12CD34)"
           fi
 
           echo ""
           echo "=== SIGNING_KEY format ==="
           if [ -n "$SIGNING_KEY" ]; then
-            echo "$SIGNING_KEY" | grep -q "BEGIN PGP PRIVATE KEY BLOCK" \
-              && echo "header: OK (PGP private key header found)" \
+            [[ "$SIGNING_KEY" == *"BEGIN PGP PRIVATE KEY BLOCK"* ]] \
+              && echo "header: OK" \
               || echo "header: MISSING — key does not contain 'BEGIN PGP PRIVATE KEY BLOCK'"
-            echo "$SIGNING_KEY" | grep -q "END PGP PRIVATE KEY BLOCK" \
-              && echo "footer: OK (PGP private key footer found)" \
+            [[ "$SIGNING_KEY" == *"END PGP PRIVATE KEY BLOCK"* ]] \
+              && echo "footer: OK" \
               || echo "footer: MISSING — key does not contain 'END PGP PRIVATE KEY BLOCK'"
-            echo "line count: $(echo "$SIGNING_KEY" | wc -l)"
           fi
 
       - name: Publish and release to Maven Central
