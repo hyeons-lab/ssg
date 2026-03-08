@@ -89,6 +89,22 @@
 
 2026-02-21T22:43-08:00 `Tailwind.Text.Size.sm` is a `data object`; its `toString()` returns the object name `"sm"`, not the Tailwind class `"text-sm"`. All usages in `NavMenu.kt` corrected to `.size`.
 
+## What Changed (continued)
+
+### `gradle/wrapper/gradle-wrapper.properties`
+- Updated `distributionUrl` from Gradle 9.0 to 9.3.1
+
+### `gradle/wrapper/gradle-wrapper.jar`
+- Updated wrapper JAR to match Gradle 9.3.1
+
 ## Commits
 
-<!-- populated as commits are made -->
+6d1bc9e — docs: add devlog and plan for feat/seo-meta-tags
+9bb036a — feat(seo): add per-page SEO metadata support to Page and Site
+77e5d42 — feat(seo): add lang attribute, og:site_name, robots.txt, and JSON-LD support
+2b5de6d — fix(nav): replace h1 with span, add logo alt text, fix margin application
+56b9914 — test: add SEO feature tests; update devlog
+d6bb93b — fix: use text-sm class, add ogSiteName property, fix nav margin tests
+c6fbc7b — docs: update devlog with fix commit details and decisions
+a5ab80d — style: apply ktfmt formatting to SEO feature files
+HEAD — chore: update Gradle wrapper to 9.3.1
