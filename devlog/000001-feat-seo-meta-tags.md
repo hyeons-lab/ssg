@@ -89,6 +89,12 @@
 
 2026-02-21T22:43-08:00 `Tailwind.Text.Size.sm` is a `data object`; its `toString()` returns the object name `"sm"`, not the Tailwind class `"text-sm"`. All usages in `NavMenu.kt` corrected to `.size`.
 
+2026-03-07T21:46-0800 JSON-LD escaping: `</script>` inside a `<script>` block terminates the tag in HTML parsers regardless of context. Standard mitigation is `<\/` which is valid JSON (forward slash can be escaped) and is invisible to JSON parsers.
+
+2026-03-07T21:46-0800 `baseUrl` trailing slash is validated rather than silently trimmed — a misconfigured URL is a caller error; failing loudly is better than producing subtly wrong output.
+
+2026-03-07T21:46-0800 `generateSitemap()` and `generateRobotsTxt()` now create the output directory themselves — callers shouldn't have to know the internal prerequisite, and `Files.createDirectories` is idempotent.
+
 ## What Changed (continued)
 
 ### `gradle/wrapper/gradle-wrapper.properties`
@@ -96,6 +102,23 @@
 
 ### `gradle/wrapper/gradle-wrapper.jar`
 - Updated wrapper JAR to match Gradle 9.3.1
+
+### `Site.kt` (code review fixes)
+- Added `lang` BCP-47 validation in `init {}` — regex `[a-zA-Z]{2,8}(-[a-zA-Z0-9]{2,8})*`
+- Added `baseUrl` trailing-slash guard in `init {}` — silent double-slash in URLs otherwise
+- Added injection validation for `baseUrl` and `defaultOgImage` — mirrors existing `Logo.imageUrl` validation
+- Merged two identical `baseUrl?.let { base ->` blocks into one; `path` computed once
+- Fixed JSON-LD `unsafe` emission: `json.replace("</", "<\\/")` prevents `</script>` in data from terminating the tag early (XSS / page-breaking)
+- Added `Files.createDirectories` at the top of `generateSitemap()` and `generateRobotsTxt()` — both can now be called before `generateFiles()`
+
+### `SiteTest.kt` (code review fixes)
+- Removed manual `File(outputPath).mkdirs()` from sitemap and robots tests — now unnecessary
+- Added test: per-page `ogImage` overrides `defaultOgImage`
+- Added test: `og:description` emitted when `metaDescription` is set
+
+### `NavMenuTest.kt` (code review fixes)
+- Renamed "should apply default horizontal margins" → "should apply default horizontal padding"
+- Renamed "should apply custom horizontal margins" → "should apply custom horizontal padding"
 
 ## Commits
 
@@ -107,4 +130,5 @@
 d6bb93b — fix: use text-sm class, add ogSiteName property, fix nav margin tests
 c6fbc7b — docs: update devlog with fix commit details and decisions
 a5ab80d — style: apply ktfmt formatting to SEO feature files
-HEAD — chore: update Gradle wrapper to 9.3.1
+7fb1bc6 — chore: update Gradle wrapper to 9.3.1
+HEAD — fix: address code review issues in SEO feature

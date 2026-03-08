@@ -577,6 +577,51 @@ class SiteTest :
         File(outputPath).deleteRecursively()
       }
 
+      test("should use per-page ogImage over site defaultOgImage") {
+        val pageWithOgImage =
+          object : Page {
+            override val title = "OG Page"
+            override val outputFilename = "og-page.html"
+            override val ogImage = "https://example.com/page-specific.jpg"
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { +"content" }
+            }
+          }
+        val outputPath = "build/test-seo-og-override"
+        val site =
+          createTestSite(
+            outputPath,
+            pages = listOf(pageWithOgImage),
+            baseUrl = "https://example.com",
+            defaultOgImage = "https://example.com/default.jpg",
+          )
+        site.generateFiles()
+        val html = File("$outputPath/og-page.html").readText()
+        html shouldContain "https://example.com/page-specific.jpg"
+        html shouldNotContain "https://example.com/default.jpg"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should include og:description when metaDescription is set") {
+        val pageWithDesc =
+          object : Page {
+            override val title = "OG Desc Page"
+            override val outputFilename = "og-desc.html"
+            override val metaDescription = "Page description for OG."
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { +"content" }
+            }
+          }
+        val outputPath = "build/test-seo-og-desc"
+        val site =
+          createTestSite(outputPath, pages = listOf(pageWithDesc), baseUrl = "https://example.com")
+        site.generateFiles()
+        val html = File("$outputPath/og-desc.html").readText()
+        html shouldContain "og:description"
+        html shouldContain "Page description for OG."
+        File(outputPath).deleteRecursively()
+      }
+
       test("should not include OG tags when baseUrl is not set") {
         val outputPath = "build/test-seo-no-og"
         val site = createTestSite(outputPath)
@@ -669,7 +714,6 @@ class SiteTest :
             pages = listOf(homePage, aboutPage),
             baseUrl = "https://example.com",
           )
-        File(outputPath).mkdirs()
         site.generateSitemap()
         val sitemap = File("$outputPath/sitemap.xml").readText()
         sitemap shouldContain "https://example.com/"
@@ -681,7 +725,6 @@ class SiteTest :
       test("should not generate sitemap.xml when baseUrl is not set") {
         val outputPath = "build/test-sitemap-no-base"
         val site = createTestSite(outputPath, pages = listOf(homePage))
-        File(outputPath).mkdirs()
         site.generateSitemap()
         File("$outputPath/sitemap.xml").exists() shouldBe false
         File(outputPath).deleteRecursively()
@@ -692,7 +735,6 @@ class SiteTest :
       test("should generate robots.txt with sitemap directive when baseUrl is set") {
         val outputPath = "build/test-robots"
         val site = createTestSite(outputPath, baseUrl = "https://example.com")
-        File(outputPath).mkdirs()
         site.generateRobotsTxt()
         val robots = File("$outputPath/robots.txt").readText()
         robots shouldContain "User-agent: *"
@@ -704,7 +746,6 @@ class SiteTest :
       test("should not generate robots.txt when baseUrl is not set") {
         val outputPath = "build/test-robots-no-base"
         val site = createTestSite(outputPath)
-        File(outputPath).mkdirs()
         site.generateRobotsTxt()
         File("$outputPath/robots.txt").exists() shouldBe false
         File(outputPath).deleteRecursively()

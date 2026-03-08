@@ -112,6 +112,32 @@ data class Site(
     validateCssClasses(htmlClasses, "htmlClasses")
     validateCssClasses(bodyClasses, "bodyClasses")
     validateCssClasses(contentClasses, "contentClasses")
+
+    // Validate lang is a plausible BCP-47 tag
+    require(lang.matches(Regex("[a-zA-Z]{2,8}(-[a-zA-Z0-9]{2,8})*"))) {
+      "lang contains an invalid BCP-47 language tag: '$lang'\n" +
+        "Valid examples: 'en', 'es', 'zh-Hant', 'pt-BR'\n" +
+        "This validation prevents HTML attribute injection via the lang attribute."
+    }
+
+    fun validateUrl(url: String, fieldName: String) {
+      require(
+        !url.contains("\"") && !url.contains("'") && !url.contains("<") && !url.contains(">")
+      ) {
+        "$fieldName contains invalid characters: '$url'\n" +
+          "Invalid characters: quotes (\", '), angle brackets (<, >)\n" +
+          "This validation prevents XSS injection via URL attributes."
+      }
+    }
+
+    baseUrl?.let { url ->
+      require(!url.endsWith("/")) {
+        "baseUrl must not have a trailing slash: '$url'\n" +
+          "Valid example: 'https://example.com' (not 'https://example.com/')"
+      }
+      validateUrl(url, "baseUrl")
+    }
+    defaultOgImage?.let { validateUrl(it, "defaultOgImage") }
   }
 
   /**
@@ -230,21 +256,16 @@ data class Site(
                   content = desc
                 }
               }
-              // Canonical URL
-              baseUrl?.let { base ->
-                val path =
-                  if (page.outputFilename == "index.html") "/" else "/${page.outputFilename}"
-                link {
-                  rel = "canonical"
-                  href = "$base$path"
-                }
-              }
-              // Open Graph + Twitter Card (requires baseUrl for absolute URLs)
+              // Canonical URL + Open Graph + Twitter Card (requires baseUrl for absolute URLs)
               baseUrl?.let { base ->
                 val path =
                   if (page.outputFilename == "index.html") "/" else "/${page.outputFilename}"
                 val canonicalUrl = "$base$path"
                 val ogTitle = page.pageTitle ?: this@Site.title
+                link {
+                  rel = "canonical"
+                  href = canonicalUrl
+                }
                 meta {
                   attributes["property"] = "og:type"
                   content = "website"
@@ -279,8 +300,9 @@ data class Site(
                 }
               }
               // JSON-LD structured data
+              // Replace </ with <\/ to prevent the string "</script>" from terminating the tag
               page.structuredData?.let { json ->
-                script(type = "application/ld+json") { unsafe { +json } }
+                script(type = "application/ld+json") { unsafe { +json.replace("</", "<\\/") } }
               }
               // Include local stylesheets
               resources.localStylesheets.forEach { cssPath ->
@@ -351,6 +373,7 @@ data class Site(
    */
   fun generateSitemap() {
     val base = baseUrl ?: return
+    Files.createDirectories(Paths.get(outputPath))
     val today = LocalDate.now()
     val xml = buildString {
       appendLine("""<?xml version="1.0" encoding="UTF-8"?>""")
@@ -378,6 +401,7 @@ data class Site(
    */
   fun generateRobotsTxt() {
     val base = baseUrl ?: return
+    Files.createDirectories(Paths.get(outputPath))
     val txt = buildString {
       appendLine("User-agent: *")
       appendLine("Allow: /")
