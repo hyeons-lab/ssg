@@ -425,7 +425,7 @@ class NavMenuTest :
         html shouldContain "fa-envelope"
       }
 
-      test("should apply default horizontal margins") {
+      test("should apply default horizontal padding") {
         val html = buildString {
           appendHTML().html {
             body {
@@ -446,11 +446,11 @@ class NavMenuTest :
           }
         }
 
-        html shouldContain "ms-16"
-        html shouldContain "me-16"
+        html shouldContain "px-4"
+        html shouldContain "md:px-16"
       }
 
-      test("should apply custom horizontal margins") {
+      test("should apply custom horizontal padding") {
         val html = buildString {
           appendHTML().html {
             body {
@@ -472,8 +472,8 @@ class NavMenuTest :
           }
         }
 
-        html shouldContain "ms-8"
-        html shouldContain "me-8"
+        html shouldContain "px-4"
+        html shouldContain "md:px-8"
       }
     }
   })

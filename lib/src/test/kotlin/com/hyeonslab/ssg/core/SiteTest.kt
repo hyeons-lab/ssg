@@ -57,6 +57,10 @@ class SiteTest :
       googleTagId: String? = null,
       localStylesheets: List<String> = listOf("css/tailwind.css"),
       externalStylesheets: List<ExternalStylesheet> = emptyList(),
+      baseUrl: String? = null,
+      defaultOgImage: String? = null,
+      lang: String = "en",
+      ogSiteName: String? = null,
     ): Site {
       return Site(
         outputPath = outputPath,
@@ -81,6 +85,10 @@ class SiteTest :
           ),
         integrations = IntegrationConfig(googleTagId = googleTagId),
         pageSettings = PageSettings(),
+        baseUrl = baseUrl,
+        defaultOgImage = defaultOgImage,
+        lang = lang,
+        ogSiteName = ogSiteName,
       )
     }
 
@@ -184,6 +192,53 @@ class SiteTest :
             }
           exception.message shouldContain fieldName
         }
+      }
+    }
+
+    context("SEO field validation") {
+      test("should reject invalid lang values") {
+        shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test", listOf(homePage)).copy(lang = "<script>")
+          }
+          .message shouldContain "lang contains an invalid BCP-47 language tag"
+
+        shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test", listOf(homePage)).copy(lang = "")
+          }
+          .message shouldContain "lang contains an invalid BCP-47 language tag"
+      }
+
+      test("should accept valid lang values") {
+        listOf("en", "es", "zh-Hant", "pt-BR", "sr-Latn").forEach { lang ->
+          createTestSite("build/test", listOf(homePage)).copy(lang = lang).lang shouldBe lang
+        }
+      }
+
+      test("should reject baseUrl with trailing slash") {
+        shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test", listOf(homePage)).copy(baseUrl = "https://example.com/")
+          }
+          .message shouldContain "must not have a trailing slash"
+      }
+
+      test("should reject baseUrl with injection characters") {
+        shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test", listOf(homePage)).copy(baseUrl = "https://example.com\"")
+          }
+          .message shouldContain "baseUrl contains invalid characters"
+
+        shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test", listOf(homePage)).copy(baseUrl = "https://example.com<x>")
+          }
+          .message shouldContain "baseUrl contains invalid characters"
+      }
+
+      test("should reject defaultOgImage with injection characters") {
+        shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test", listOf(homePage))
+              .copy(defaultOgImage = "https://example.com/og.jpg\"")
+          }
+          .message shouldContain "defaultOgImage contains invalid characters"
       }
     }
 
@@ -505,6 +560,275 @@ class SiteTest :
         File("$outputPath/about.html").exists() shouldBe true
         File("$outputPath/crash.html").exists() shouldBe false
 
+        File(outputPath).deleteRecursively()
+      }
+    }
+
+    context("SEO meta tags") {
+      test("should include per-page meta description") {
+        val pageWithDesc =
+          object : Page {
+            override val title = "SEO Page"
+            override val outputFilename = "seo.html"
+            override val metaDescription = "A great description for SEO."
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { +"content" }
+            }
+          }
+        val outputPath = "build/test-seo-desc"
+        val site = createTestSite(outputPath, pages = listOf(pageWithDesc))
+        site.generateFiles()
+        val html = File("$outputPath/seo.html").readText()
+        html shouldContain "name=\"description\""
+        html shouldContain "A great description for SEO."
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should include per-page title in <title> tag") {
+        val pageWithTitle =
+          object : Page {
+            override val title = "Nav Title"
+            override val outputFilename = "ptitle.html"
+            override val pageTitle = "Custom Page Title"
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { +"content" }
+            }
+          }
+        val outputPath = "build/test-seo-title"
+        val site = createTestSite(outputPath, pages = listOf(pageWithTitle))
+        site.generateFiles()
+        val html = File("$outputPath/ptitle.html").readText()
+        html shouldContain "<title>Custom Page Title</title>"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should include canonical URL and OG tags when baseUrl is set") {
+        val outputPath = "build/test-seo-og"
+        val site =
+          createTestSite(
+            outputPath,
+            baseUrl = "https://example.com",
+            defaultOgImage = "https://example.com/og.jpg",
+          )
+        site.generateFiles()
+        val html = File("$outputPath/index.html").readText()
+        html shouldContain "rel=\"canonical\""
+        html shouldContain "https://example.com/"
+        html shouldContain "og:type"
+        html shouldContain "og:site_name"
+        html shouldContain "og:title"
+        html shouldContain "og:url"
+        html shouldContain "og:image"
+        html shouldContain "https://example.com/og.jpg"
+        html shouldContain "twitter:card"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should use per-page ogImage over site defaultOgImage") {
+        val pageWithOgImage =
+          object : Page {
+            override val title = "OG Page"
+            override val outputFilename = "og-page.html"
+            override val ogImage = "https://example.com/page-specific.jpg"
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { +"content" }
+            }
+          }
+        val outputPath = "build/test-seo-og-override"
+        val site =
+          createTestSite(
+            outputPath,
+            pages = listOf(pageWithOgImage),
+            baseUrl = "https://example.com",
+            defaultOgImage = "https://example.com/default.jpg",
+          )
+        site.generateFiles()
+        val html = File("$outputPath/og-page.html").readText()
+        html shouldContain "https://example.com/page-specific.jpg"
+        html shouldNotContain "https://example.com/default.jpg"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should include og:description when metaDescription is set") {
+        val pageWithDesc =
+          object : Page {
+            override val title = "OG Desc Page"
+            override val outputFilename = "og-desc.html"
+            override val metaDescription = "Page description for OG."
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { +"content" }
+            }
+          }
+        val outputPath = "build/test-seo-og-desc"
+        val site =
+          createTestSite(outputPath, pages = listOf(pageWithDesc), baseUrl = "https://example.com")
+        site.generateFiles()
+        val html = File("$outputPath/og-desc.html").readText()
+        html shouldContain "og:description"
+        html shouldContain "Page description for OG."
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should not include OG tags when baseUrl is not set") {
+        val outputPath = "build/test-seo-no-og"
+        val site = createTestSite(outputPath)
+        site.generateFiles()
+        val html = File("$outputPath/index.html").readText()
+        html shouldNotContain "og:type"
+        html shouldNotContain "rel=\"canonical\""
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should use site title as og:site_name when ogSiteName is null") {
+        val outputPath = "build/test-seo-sitename"
+        val site = createTestSite(outputPath, baseUrl = "https://example.com")
+        site.generateFiles()
+        val html = File("$outputPath/index.html").readText()
+        html shouldContain "og:site_name"
+        html shouldContain "Test Site"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should use ogSiteName when set instead of site title") {
+        val outputPath = "build/test-seo-sitename-custom"
+        val site =
+          createTestSite(outputPath, baseUrl = "https://example.com", ogSiteName = "My Brand")
+        site.generateFiles()
+        val html = File("$outputPath/index.html").readText()
+        html shouldContain "og:site_name"
+        html shouldContain "My Brand"
+        File(outputPath).deleteRecursively()
+      }
+    }
+
+    context("lang attribute") {
+      test("should set default lang=en on html element") {
+        val outputPath = "build/test-lang-default"
+        val site = createTestSite(outputPath)
+        site.generateFiles()
+        val html = File("$outputPath/index.html").readText()
+        html shouldContain "lang=\"en\""
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should set custom lang on html element") {
+        val outputPath = "build/test-lang-custom"
+        val site = createTestSite(outputPath, lang = "es")
+        site.generateFiles()
+        val html = File("$outputPath/index.html").readText()
+        html shouldContain "lang=\"es\""
+        File(outputPath).deleteRecursively()
+      }
+    }
+
+    context("structured data (JSON-LD)") {
+      test("should embed JSON-LD script when structuredData is set") {
+        val jsonLd = """{"@context":"https://schema.org","@type":"WebSite","name":"Test"}"""
+        val pageWithSchema =
+          object : Page {
+            override val title = "Schema Page"
+            override val outputFilename = "schema.html"
+            override val structuredData = jsonLd
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { +"content" }
+            }
+          }
+        val outputPath = "build/test-jsonld"
+        val site = createTestSite(outputPath, pages = listOf(pageWithSchema))
+        site.generateFiles()
+        val html = File("$outputPath/schema.html").readText()
+        html shouldContain "application/ld+json"
+        html shouldContain """{"@context":"https://schema.org""""
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should escape </script> in structuredData to prevent tag break") {
+        val jsonWithScript =
+          """{"@context":"https://schema.org","name":"</script><script>alert(1)</script>"}"""
+        val pageWithDangerousSchema =
+          object : Page {
+            override val title = "Dangerous Schema Page"
+            override val outputFilename = "dangerous-schema.html"
+            override val structuredData = jsonWithScript
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { +"content" }
+            }
+          }
+        val outputPath = "build/test-jsonld-escape"
+        val site = createTestSite(outputPath, pages = listOf(pageWithDangerousSchema))
+        site.generateFiles()
+        val html = File("$outputPath/dangerous-schema.html").readText()
+        html shouldNotContain "</script><script>"
+        html shouldContain "<\\/script>"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should not emit JSON-LD script when structuredData is null") {
+        val outputPath = "build/test-no-jsonld"
+        val site = createTestSite(outputPath)
+        site.generateFiles()
+        val html = File("$outputPath/index.html").readText()
+        html shouldNotContain "application/ld+json"
+        File(outputPath).deleteRecursively()
+      }
+    }
+
+    context("generateSitemap()") {
+      test("should generate sitemap.xml with all page URLs") {
+        val outputPath = "build/test-sitemap"
+        val site =
+          createTestSite(
+            outputPath,
+            pages = listOf(homePage, aboutPage),
+            baseUrl = "https://example.com",
+          )
+        site.generateSitemap()
+        val sitemap = File("$outputPath/sitemap.xml").readText()
+        sitemap shouldContain "https://example.com/"
+        sitemap shouldContain "https://example.com/about.html"
+        sitemap shouldContain "<lastmod>"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should not generate sitemap.xml when baseUrl is not set") {
+        val outputPath = "build/test-sitemap-no-base"
+        val site = createTestSite(outputPath, pages = listOf(homePage))
+        site.generateSitemap()
+        File("$outputPath/sitemap.xml").exists() shouldBe false
+        File(outputPath).deleteRecursively()
+      }
+    }
+
+    context("generateRobotsTxt()") {
+      test("should generate robots.txt with sitemap directive when baseUrl is set") {
+        val outputPath = "build/test-robots"
+        val site = createTestSite(outputPath, baseUrl = "https://example.com")
+        site.generateRobotsTxt()
+        val robots = File("$outputPath/robots.txt").readText()
+        robots shouldContain "User-agent: *"
+        robots shouldContain "Allow: /"
+        robots shouldContain "Sitemap: https://example.com/sitemap.xml"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should not generate robots.txt when baseUrl is not set") {
+        val outputPath = "build/test-robots-no-base"
+        val site = createTestSite(outputPath)
+        site.generateRobotsTxt()
+        File("$outputPath/robots.txt").exists() shouldBe false
+        File(outputPath).deleteRecursively()
+      }
+    }
+
+    context("nav heading hierarchy") {
+      test("should use span instead of h1 for nav items") {
+        val outputPath = "build/test-nav-span"
+        val site = createTestSite(outputPath, pages = listOf(homePage, aboutPage))
+        site.generateFiles()
+        val html = File("$outputPath/index.html").readText()
+        // nav items should be <span>, not bare <h1> tags in the nav
+        html shouldContain "<span"
+        html shouldNotContain "<h1 class=\"text-sm"
         File(outputPath).deleteRecursively()
       }
     }

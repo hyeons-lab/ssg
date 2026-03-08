@@ -79,8 +79,8 @@ class NavigationBuilder {
    * logo("images/logo.png", width = 100, height = 50)
    * ```
    */
-  fun logo(imageUrl: String, width: Int, height: Int) {
-    logoConfig = Logo(imageUrl = imageUrl, width = width, height = height)
+  fun logo(imageUrl: String, width: Int, height: Int, altText: String = "") {
+    logoConfig = Logo(imageUrl = imageUrl, width = width, height = height, altText = altText)
   }
 
   /**
@@ -144,12 +144,13 @@ class LogoBuilder {
   var imageUrl: String? = null
   var width: Int? = null
   var height: Int? = null
+  var altText: String = ""
 
   fun build(): Logo {
     requireNotNull(imageUrl) { "logo.imageUrl must be specified" }
     requireNotNull(width) { "logo.width must be specified" }
     requireNotNull(height) { "logo.height must be specified" }
 
-    return Logo(imageUrl = imageUrl!!, width = width!!, height = height!!)
+    return Logo(imageUrl = imageUrl!!, width = width!!, height = height!!, altText = altText)
   }
 }
