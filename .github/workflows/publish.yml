@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Branch, tag, or commit SHA to publish from'
+        description: 'Tag or commit SHA to publish from (e.g. v1.2.3). Must be on main or a version tag — arbitrary branches are not accepted to prevent publishing untrusted code with release credentials.'
         required: false
         default: 'main'
 
@@ -16,6 +16,19 @@ jobs:
       contents: read
 
     steps:
+      - name: Validate ref
+        run: |
+          REF="${{ inputs.ref }}"
+          # Allow: 'main', version tags (v1.2.3 / 1.2.3), or full/short commit SHAs
+          if [[ "$REF" == "main" ]] \
+            || [[ "$REF" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9._-]+)?$ ]] \
+            || [[ "$REF" =~ ^[0-9a-f]{7,40}$ ]]; then
+            echo "ref '$REF' accepted"
+          else
+            echo "ref '$REF' is not allowed — must be 'main', a version tag (e.g. v1.2.3), or a commit SHA"
+            exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -50,9 +63,9 @@ jobs:
           echo ""
           echo "=== SIGNING_KEY_ID format ==="
           if [ -n "$SIGNING_KEY_ID" ]; then
-            [[ "$SIGNING_KEY_ID" =~ ^[0-9A-Fa-f]{8}$ ]] \
-              && echo "format: OK (8 hex chars)" \
-              || echo "format: UNEXPECTED — expected exactly 8 hex characters (e.g. AB12CD34)"
+            [[ "$SIGNING_KEY_ID" =~ ^([0-9A-Fa-f]{8}|[0-9A-Fa-f]{16}|[0-9A-Fa-f]{40})$ ]] \
+              && echo "format: OK (8, 16, or 40 hex chars)" \
+              || echo "format: UNEXPECTED — expected 8, 16, or 40 hex characters (e.g. AB12CD34, 1234ABCD5678EF90, or a 40-hex fingerprint)"
           fi
 
           echo ""

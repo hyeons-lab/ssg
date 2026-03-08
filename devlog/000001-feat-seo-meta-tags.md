@@ -135,6 +135,8 @@
 ### `.github/workflows/publish.yml`
 - Added `workflow_dispatch` workflow with `ref` input (default `"main"`) for publishing to Maven Central
 - Debug step uses `[[ ]]` bash conditionals to verify secret presence and format without outputting values
+- Added `Validate ref` step that restricts `inputs.ref` to `main`, version tags (`v1.2.3` / `1.2.3`), or commit SHAs — prevents publishing untrusted code with release credentials (code review feedback)
+- Broadened `SIGNING_KEY_ID` format check to accept 8, 16, or 40 hex chars — GPG key IDs are also commonly 16-hex long IDs or 40-hex fingerprints (code review feedback)
 
 ### `lib/build.gradle.kts` (signing fix)
 - Removed standalone `signing { setRequired { ... } }` block — it was reconfiguring the `SigningExtension` after vanniktech's `signAllPublications()` had already called `useInMemoryPgpKeys()`, wiping out the configured signatory
@@ -156,4 +158,5 @@ cbc9c54 — fix: address second code review round
 8946896 — ci: add Maven Central publish workflow
 647697c — ci: add signing secret debug step to publish workflow
 5195f42 — ci: remove credential exposure from debug step
-HEAD — fix: remove conflicting signing block that broke Maven Central publish
+0f46e36 — fix: remove conflicting signing block that broke Maven Central publish
+HEAD — ci: address PR review comments on publish workflow
