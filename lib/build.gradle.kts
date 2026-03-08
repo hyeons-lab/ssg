@@ -6,7 +6,6 @@ plugins {
   alias(libs.plugins.vanniktechMavenPublish)
   alias(libs.plugins.ktfmt)
   `java-library`
-  signing
 }
 
 group = "com.hyeons-lab"
@@ -71,16 +70,11 @@ mavenPublishing {
     }
   }
 
-  // Sign all publications (only if credentials are available)
+  // Sign all publications using in-memory PGP keys supplied via
+  // ORG_GRADLE_PROJECT_signingInMemoryKey* env vars. The vanniktech plugin
+  // handles useInMemoryPgpKeys() and setRequired() internally — no separate
+  // signing {} block needed (adding one would wipe out the configured signatory).
   signAllPublications()
-}
-
-// Configure signing to be optional when credentials are not available
-signing {
-  setRequired {
-    // Only require signing when publishing to Maven Central (not for Maven Local)
-    gradle.taskGraph.allTasks.any { it.name.contains("ToMavenCentral") }
-  }
 }
 
 // Dokka V2 configuration for generating HTML documentation from KDoc
