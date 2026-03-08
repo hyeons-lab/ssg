@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Branch, tag, or commit SHA to publish from'
+        description: 'Tag or commit SHA to publish from (e.g. v1.2.3). Must be on main or a version tag — arbitrary branches are not accepted to prevent publishing untrusted code with release credentials.'
         required: false
         default: 'main'
 
@@ -16,6 +16,19 @@ jobs:
       contents: read
 
     steps:
+      - name: Validate ref
+        run: |
+          REF="${{ inputs.ref }}"
+          # Allow: 'main', version tags (v1.2.3 / 1.2.3), or full/short commit SHAs
+          if [[ "$REF" == "main" ]] \
+            || [[ "$REF" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9._-]+)?$ ]] \
+            || [[ "$REF" =~ ^[0-9a-f]{7,40}$ ]]; then
+            echo "ref '$REF' accepted"
+          else
+            echo "ref '$REF' is not allowed — must be 'main', a version tag (e.g. v1.2.3), or a commit SHA"
+            exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -31,6 +44,40 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: true
+
+      - name: Debug signing secrets
+        env:
+          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        run: |
+          echo "=== Secret presence ==="
+          [ -n "$SIGNING_KEY_ID" ]         && echo "SIGNING_KEY_ID:         set" || echo "SIGNING_KEY_ID:         MISSING OR EMPTY"
+          [ -n "$SIGNING_KEY" ]            && echo "SIGNING_KEY:            set" || echo "SIGNING_KEY:            MISSING OR EMPTY"
+          [ -n "$SIGNING_KEY_PASSWORD" ]   && echo "SIGNING_KEY_PASSWORD:   set" || echo "SIGNING_KEY_PASSWORD:   MISSING OR EMPTY"
+          [ -n "$MAVEN_CENTRAL_USERNAME" ] && echo "MAVEN_CENTRAL_USERNAME: set" || echo "MAVEN_CENTRAL_USERNAME: MISSING OR EMPTY"
+          [ -n "$MAVEN_CENTRAL_PASSWORD" ] && echo "MAVEN_CENTRAL_PASSWORD: set" || echo "MAVEN_CENTRAL_PASSWORD: MISSING OR EMPTY"
+
+          echo ""
+          echo "=== SIGNING_KEY_ID format ==="
+          if [ -n "$SIGNING_KEY_ID" ]; then
+            [[ "$SIGNING_KEY_ID" =~ ^([0-9A-Fa-f]{8}|[0-9A-Fa-f]{16}|[0-9A-Fa-f]{40})$ ]] \
+              && echo "format: OK (8, 16, or 40 hex chars)" \
+              || echo "format: UNEXPECTED — expected 8, 16, or 40 hex characters (e.g. AB12CD34, 1234ABCD5678EF90, or a 40-hex fingerprint)"
+          fi
+
+          echo ""
+          echo "=== SIGNING_KEY format ==="
+          if [ -n "$SIGNING_KEY" ]; then
+            [[ "$SIGNING_KEY" == *"BEGIN PGP PRIVATE KEY BLOCK"* ]] \
+              && echo "header: OK" \
+              || echo "header: MISSING — key does not contain 'BEGIN PGP PRIVATE KEY BLOCK'"
+            [[ "$SIGNING_KEY" == *"END PGP PRIVATE KEY BLOCK"* ]] \
+              && echo "footer: OK" \
+              || echo "footer: MISSING — key does not contain 'END PGP PRIVATE KEY BLOCK'"
+          fi
 
       - name: Publish and release to Maven Central
         run: ./gradlew :lib:publishAndReleaseToMavenCentral --no-daemon --stacktrace

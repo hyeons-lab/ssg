@@ -93,6 +93,8 @@
 
 2026-03-07T21:46-0800 `baseUrl` trailing slash is validated rather than silently trimmed — a misconfigured URL is a caller error; failing loudly is better than producing subtly wrong output.
 
+2026-03-07T23:28-0800 Removed the standalone `signing { setRequired { ... } }` block from `lib/build.gradle.kts`. The vanniktech plugin's `signAllPublications()` calls `useInMemoryPgpKeys()` with the `ORG_GRADLE_PROJECT_signingInMemoryKey*` properties. A subsequent bare `signing {}` block reconfigures `SigningExtension` without providing key material, resetting the signatory to null. This caused `signMavenPublication FAILED: no configured signatory` in CI despite all secrets being correctly set. Also removed the explicit `signing` plugin from `plugins {}` since vanniktech applies it internally — the redundant declaration contributed to the conflict.
+
 2026-03-07T21:46-0800 `generateSitemap()` and `generateRobotsTxt()` now create the output directory themselves — callers shouldn't have to know the internal prerequisite, and `Files.createDirectories` is idempotent.
 
 ## What Changed (continued)
@@ -130,6 +132,16 @@
 - Added `context("SEO field validation")` with 5 tests covering: invalid `lang` rejected, valid lang values accepted, `baseUrl` trailing slash rejected, `baseUrl` injection chars rejected, `defaultOgImage` injection chars rejected
 - Added test: `</script>` in `structuredData` is escaped to `<\/script>` in output
 
+### `.github/workflows/publish.yml`
+- Added `workflow_dispatch` workflow with `ref` input (default `"main"`) for publishing to Maven Central
+- Debug step uses `[[ ]]` bash conditionals to verify secret presence and format without outputting values
+- Added `Validate ref` step that restricts `inputs.ref` to `main`, version tags (`v1.2.3` / `1.2.3`), or commit SHAs — prevents publishing untrusted code with release credentials (code review feedback)
+- Broadened `SIGNING_KEY_ID` format check to accept 8, 16, or 40 hex chars — GPG key IDs are also commonly 16-hex long IDs or 40-hex fingerprints (code review feedback)
+
+### `lib/build.gradle.kts` (signing fix)
+- Removed standalone `signing { setRequired { ... } }` block — it was reconfiguring the `SigningExtension` after vanniktech's `signAllPublications()` had already called `useInMemoryPgpKeys()`, wiping out the configured signatory
+- Removed `signing` from `plugins {}` — vanniktech applies the signing plugin internally when `signAllPublications()` is used; the explicit declaration was redundant and contributed to the conflict
+
 ## Commits
 
 6d1bc9e — docs: add devlog and plan for feat/seo-meta-tags
@@ -143,4 +155,8 @@ a5ab80d — style: apply ktfmt formatting to SEO feature files
 7fb1bc6 — chore: update Gradle wrapper to 9.3.1
 e7062c6 — fix: address code review issues in SEO feature
 cbc9c54 — fix: address second code review round
-HEAD — ci: add Maven Central publish workflow
+8946896 — ci: add Maven Central publish workflow
+647697c — ci: add signing secret debug step to publish workflow
+5195f42 — ci: remove credential exposure from debug step
+0f46e36 — fix: remove conflicting signing block that broke Maven Central publish
+HEAD — ci: address PR review comments on publish workflow
