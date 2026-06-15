@@ -46,6 +46,25 @@ against `origin/main` before fixing.
   `horizontalMargin` validation, logo-link, duplicate/traversal page filenames, the version meta,
   and `noLocalStylesheets()`. `./gradlew build` green.
 
+### SEO follow-up review (PR #2 surface)
+
+A second `/code-review` pass over the newly-merged SEO code (OG/JSON-LD/sitemap/robots/lang)
+surfaced 12 findings; all fixed in this same branch/PR.
+
+- 2026-06-15T12:54-0700 `utils/Encoding.kt` (new) — `escapeXml` and `encodeUrlPath` helpers.
+- 2026-06-15T12:54-0700 `core/Site.kt` — sitemap `<loc>` now URL-encoded + XML-escaped via a shared
+  `pageUrlPath()` (also used by canonical/og:url, removing the duplicated path logic); JSON-LD now
+  escapes `<`/`>` as `<`/`>` (defeats the `<!--<script>` script-data-escape vector, not
+  just `</script>`); blank `pageTitle`/`metaDescription` fall back instead of emitting empty tags;
+  per-page `ogImage` validated like `defaultOgImage`; `og:type` taken from new `Page.ogType`;
+  `generateSitemap(lastmod = null)` omits `<lastmod>` by default (deterministic, no `now()`);
+  `robots.txt` uses standard `Disallow:`; added `ensureOutputDir()` (dedup) and a `generate()`
+  convenience that emits pages+sitemap+robots together; fixed stale KDoc.
+- 2026-06-15T12:54-0700 `page/Page.kt` — added optional `ogType` (default "website").
+- 2026-06-15T12:54-0700 Tests — updated JSON-LD/sitemap/robots assertions to the new behavior;
+  added coverage for URL-encoding/XML-escaping, deterministic lastmod, `og:type`, blank-title
+  fallback, and `generate()`. `./gradlew build` green (115 test blocks).
+
 ## Issues
 
 - Review was performed against stale local `main`; discovered the divergence only when the worktree
@@ -66,4 +85,5 @@ against `origin/main` before fixing.
 
 ## Commits
 
-- HEAD — fix: address code-review findings (validation, resource copy, nav layout)
+- 283df24 — fix: address code-review findings (validation, resource copy, nav layout)
+- HEAD — fix(seo): harden SEO output (sitemap escaping/encoding, JSON-LD, og:type, generate())

@@ -19,6 +19,8 @@ import com.hyeonslab.ssg.page.NavMenuSettings
 import com.hyeonslab.ssg.page.Page
 import com.hyeonslab.ssg.page.PageSettings
 import com.hyeonslab.ssg.page.navMenu
+import com.hyeonslab.ssg.utils.encodeUrlPath
+import com.hyeonslab.ssg.utils.escapeXml
 import com.hyeonslab.ssg.utils.validateCssClasses
 import com.hyeonslab.ssg.utils.validateRelativePath
 import com.hyeonslab.ssg.utils.validateUrlChars
@@ -39,6 +41,13 @@ import kotlinx.html.unsafe
 
 /** Plausible BCP-47 language tag for the `<html lang>` attribute. */
 private val LANG_REGEX = Regex("^[a-zA-Z]{2,8}(-[a-zA-Z0-9]{2,8})*$")
+
+/**
+ * The site-root-relative URL path for a page: "/" for index.html, otherwise the URL-encoded
+ * filename. Shared by the canonical/og:url tags and the sitemap so they cannot drift apart.
+ */
+private fun pageUrlPath(page: Page): String =
+  if (page.outputFilename == "index.html") "/" else "/" + encodeUrlPath(page.outputFilename)
 
 /**
  * Main configuration for a static site generator.
@@ -117,8 +126,9 @@ data class Site(
       "Duplicate page outputFilename(s): ${duplicates.joinToString()}\n" +
         "Each page must have a distinct outputFilename or generated files will overwrite each other."
     }
-    pages.forEach {
-      validateRelativePath(it.outputFilename, "Page outputFilename '${it.outputFilename}'")
+    pages.forEach { page ->
+      validateRelativePath(page.outputFilename, "Page outputFilename '${page.outputFilename}'")
+      page.ogImage?.let { validateUrlChars(it, "Page ogImage") }
     }
 
     // Validate lang is a plausible BCP-47 tag
@@ -224,8 +234,7 @@ data class Site(
    */
   fun generateFiles() {
     try {
-      // Create output directory (thread-safe, creates parents, idempotent)
-      Files.createDirectories(Paths.get(outputPath))
+      ensureOutputDir()
     } catch (e: Exception) {
       error("Failed to create output directory '$outputPath': ${e.message}")
     }
@@ -241,7 +250,10 @@ data class Site(
               attributes["class"] = htmlClasses
             }
             head {
-              title { +(page.pageTitle ?: this@Site.title) }
+              // Fall back to the site title/description when a page omits or blanks its own
+              val effectiveTitle = page.pageTitle?.takeIf { it.isNotBlank() } ?: this@Site.title
+              val description = page.metaDescription?.takeIf { it.isNotBlank() }
+              title { +effectiveTitle }
               meta { charset = "utf-8" }
               meta {
                 name = "viewport"
@@ -255,7 +267,7 @@ data class Site(
                 }
               }
               // Per-page meta description
-              page.metaDescription?.let { desc ->
+              description?.let { desc ->
                 meta {
                   name = "description"
                   content = desc
@@ -263,17 +275,14 @@ data class Site(
               }
               // Canonical URL + Open Graph + Twitter Card (requires baseUrl for absolute URLs)
               baseUrl?.let { base ->
-                val path =
-                  if (page.outputFilename == "index.html") "/" else "/${page.outputFilename}"
-                val canonicalUrl = "$base$path"
-                val ogTitle = page.pageTitle ?: this@Site.title
+                val canonicalUrl = "$base${pageUrlPath(page)}"
                 link {
                   rel = "canonical"
                   href = canonicalUrl
                 }
                 meta {
                   attributes["property"] = "og:type"
-                  content = "website"
+                  content = page.ogType ?: "website"
                 }
                 meta {
                   attributes["property"] = "og:site_name"
@@ -281,9 +290,9 @@ data class Site(
                 }
                 meta {
                   attributes["property"] = "og:title"
-                  content = ogTitle
+                  content = effectiveTitle
                 }
-                page.metaDescription?.let { desc ->
+                description?.let { desc ->
                   meta {
                     attributes["property"] = "og:description"
                     content = desc
@@ -304,10 +313,13 @@ data class Site(
                   content = "summary_large_image"
                 }
               }
-              // JSON-LD structured data
-              // Replace </ with <\/ to prevent the string "</script>" from terminating the tag
+              // JSON-LD structured data. Escape angle brackets as their JSON unicode escapes
+              // (< / >) so the content cannot terminate the <script> tag or trigger the
+              // script-data escaped states (e.g. via "<!--<script>").
               page.structuredData?.let { json ->
-                script(type = "application/ld+json") { unsafe { +json.replace("</", "<\\/") } }
+                script(type = "application/ld+json") {
+                  unsafe { +json.replace("<", "\\u003c").replace(">", "\\u003e") }
+                }
               }
               // Include local stylesheets
               resources.localStylesheets.forEach { cssPath ->
@@ -356,38 +368,26 @@ data class Site(
   }
 
   /**
-   * Generates a `sitemap.xml` file in the output directory listing all page URLs.
+   * Generates a `sitemap.xml` file in the output directory listing all page URLs. URLs are
+   * URL-encoded and XML-escaped so filenames with spaces or reserved characters stay well-formed.
    *
    * Only runs when [baseUrl] is set on this site. If [baseUrl] is null this method returns without
    * creating any file, so it is safe to call unconditionally.
    *
-   * The sitemap uses today's date as the `<lastmod>` value for every URL.
-   *
-   * Example:
-   * ```kotlin
-   * val site = site {
-   *     outputPath = "build/generated_html"
-   *     baseUrl = "https://example.com"
-   *     pages = listOf(HomePage, AboutPage)
-   * }
-   * File(outputPath).deleteRecursively()
-   * site.generateFiles()   // optional — generateSitemap() creates the directory itself
-   * site.generateSitemap() // writes build/generated_html/sitemap.xml
-   * site.copyResources()
-   * ```
+   * @param lastmod Optional `<lastmod>` date applied to every URL. When null (the default) no
+   *   `<lastmod>` is emitted, keeping output deterministic; pass a fixed date for reproducible
+   *   builds. Prefer [generate] to produce the pages, sitemap, and robots.txt together.
    */
-  fun generateSitemap() {
+  fun generateSitemap(lastmod: LocalDate? = null) {
     val base = baseUrl ?: return
-    Files.createDirectories(Paths.get(outputPath))
-    val today = LocalDate.now()
+    ensureOutputDir()
     val xml = buildString {
       appendLine("""<?xml version="1.0" encoding="UTF-8"?>""")
       appendLine("""<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">""")
       pages.forEach { page ->
-        val path = if (page.outputFilename == "index.html") "/" else "/${page.outputFilename}"
         appendLine("  <url>")
-        appendLine("    <loc>$base$path</loc>")
-        appendLine("    <lastmod>$today</lastmod>")
+        appendLine("    <loc>${escapeXml("$base${pageUrlPath(page)}")}</loc>")
+        lastmod?.let { appendLine("    <lastmod>$it</lastmod>") }
         appendLine("  </url>")
       }
       appendLine("</urlset>")
@@ -401,17 +401,35 @@ data class Site(
    * Only runs when [baseUrl] is set on this site. If [baseUrl] is null this method returns without
    * creating any file, so it is safe to call unconditionally.
    *
-   * The generated file allows all user agents and includes a `Sitemap:` directive pointing to
-   * `sitemap.xml` at the base URL.
+   * The generated file allows all user agents (empty `Disallow:`, the standard allow-all form) and
+   * includes a `Sitemap:` directive pointing to `sitemap.xml` at the base URL.
    */
   fun generateRobotsTxt() {
     val base = baseUrl ?: return
-    Files.createDirectories(Paths.get(outputPath))
+    ensureOutputDir()
     val txt = buildString {
       appendLine("User-agent: *")
-      appendLine("Allow: /")
+      appendLine("Disallow:")
       appendLine("Sitemap: $base/sitemap.xml")
     }
     File("$outputPath/robots.txt").writeText(txt)
+  }
+
+  /** Creates the output directory (and parents) if needed. Thread-safe and idempotent. */
+  private fun ensureOutputDir() {
+    Files.createDirectories(Paths.get(outputPath))
+  }
+
+  /**
+   * Convenience entry point: generates the HTML pages and, when [baseUrl] is set, the matching
+   * `sitemap.xml` and `robots.txt`. Producing them together keeps robots.txt from advertising a
+   * sitemap that was never generated.
+   *
+   * @param sitemapLastmod Optional `<lastmod>` date for the sitemap (see [generateSitemap]).
+   */
+  fun generate(sitemapLastmod: LocalDate? = null) {
+    generateFiles()
+    generateSitemap(sitemapLastmod)
+    generateRobotsTxt()
   }
 }

@@ -29,6 +29,8 @@ import kotlinx.html.FlowContent
  *   recommended)
  * @property ogImage Optional absolute URL for `<meta property="og:image">`; falls back to the
  *   site-level `defaultOgImage`
+ * @property ogType Optional Open Graph type for `<meta property="og:type">` (e.g. "article" for
+ *   blog posts); defaults to "website" when null
  */
 interface Page {
   val title: String
@@ -44,6 +46,9 @@ interface Page {
     get() = null
 
   val ogImage: String?
+    get() = null
+
+  val ogType: String?
     get() = null
 
   /**
