@@ -19,6 +19,9 @@ import com.hyeonslab.ssg.page.NavMenuSettings
 import com.hyeonslab.ssg.page.Page
 import com.hyeonslab.ssg.page.PageSettings
 import com.hyeonslab.ssg.page.navMenu
+import com.hyeonslab.ssg.utils.validateCssClasses
+import com.hyeonslab.ssg.utils.validateRelativePath
+import com.hyeonslab.ssg.utils.validateUrlChars
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -33,6 +36,9 @@ import kotlinx.html.script
 import kotlinx.html.stream.appendHTML
 import kotlinx.html.title
 import kotlinx.html.unsafe
+
+/** Plausible BCP-47 language tag for the `<html lang>` attribute. */
+private val LANG_REGEX = Regex("^[a-zA-Z]{2,8}(-[a-zA-Z0-9]{2,8})*$")
 
 /**
  * Main configuration for a static site generator.
@@ -98,36 +104,28 @@ data class Site(
 ) {
   init {
     // Validate CSS class strings to prevent HTML attribute injection
-    fun validateCssClasses(classes: String, fieldName: String) {
-      if (classes.isEmpty()) return // Empty strings are allowed
-      require(classes.matches(Regex("^[a-zA-Z0-9\\s\\-_:/\\[\\].%]+$"))) {
-        "$fieldName contains invalid characters: '$classes'\n" +
-          "Allowed characters: letters, numbers, spaces, hyphens, underscores, colons, slashes, brackets, dots, percent signs\n" +
-          "Valid examples: 'bg-white', 'text-blue-600 hover:text-blue-700', 'w-1/2', 'z-[255]', 'bg-white/90'\n" +
-          "This validation prevents HTML attribute injection attacks."
-      }
-    }
-
     validateCssClasses(backgroundColor, "backgroundColor")
     validateCssClasses(htmlClasses, "htmlClasses")
     validateCssClasses(bodyClasses, "bodyClasses")
     validateCssClasses(contentClasses, "contentClasses")
 
+    // Page output filenames must be unique (otherwise generated files silently overwrite each
+    // other) and must stay inside the output directory.
+    require(pages.map { it.outputFilename }.toSet().size == pages.size) {
+      val duplicates =
+        pages.groupingBy { it.outputFilename }.eachCount().filterValues { it > 1 }.keys
+      "Duplicate page outputFilename(s): ${duplicates.joinToString()}\n" +
+        "Each page must have a distinct outputFilename or generated files will overwrite each other."
+    }
+    pages.forEach {
+      validateRelativePath(it.outputFilename, "Page outputFilename '${it.outputFilename}'")
+    }
+
     // Validate lang is a plausible BCP-47 tag
-    require(lang.matches(Regex("[a-zA-Z]{2,8}(-[a-zA-Z0-9]{2,8})*"))) {
+    require(lang.matches(LANG_REGEX)) {
       "lang contains an invalid BCP-47 language tag: '$lang'\n" +
         "Valid examples: 'en', 'es', 'zh-Hant', 'pt-BR'\n" +
         "This validation prevents HTML attribute injection via the lang attribute."
-    }
-
-    fun validateUrl(url: String, fieldName: String) {
-      require(
-        !url.contains("\"") && !url.contains("'") && !url.contains("<") && !url.contains(">")
-      ) {
-        "$fieldName contains invalid characters: '$url'\n" +
-          "Invalid characters: quotes (\", '), angle brackets (<, >)\n" +
-          "This validation prevents XSS injection via URL attributes."
-      }
     }
 
     baseUrl?.let { url ->
@@ -135,9 +133,9 @@ data class Site(
         "baseUrl must not have a trailing slash: '$url'\n" +
           "Valid example: 'https://example.com' (not 'https://example.com/')"
       }
-      validateUrl(url, "baseUrl")
+      validateUrlChars(url, "baseUrl")
     }
-    defaultOgImage?.let { validateUrl(it, "defaultOgImage") }
+    defaultOgImage?.let { validateUrlChars(it, "defaultOgImage") }
   }
 
   /**
@@ -248,6 +246,13 @@ data class Site(
               meta {
                 name = "viewport"
                 content = "width=device-width, initial-scale=1.0"
+              }
+              // Site version for tracking
+              if (this@Site.version.isNotBlank()) {
+                meta {
+                  name = "version"
+                  content = this@Site.version
+                }
               }
               // Per-page meta description
               page.metaDescription?.let { desc ->

@@ -15,14 +15,27 @@
  */
 package com.hyeonslab.ssg.core
 
+import com.hyeonslab.ssg.utils.validateRelativePath
 import java.io.File
+import java.io.InputStream
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import kotlin.use
 import kotlinx.io.asSink
 import kotlinx.io.asSource
 import kotlinx.io.buffered
 import kotlinx.serialization.Serializable
+
+/**
+ * Opens a classpath resource using the thread-context classloader, falling back to this class's
+ * loader and finally the system loader. More robust than the system classloader alone, which can
+ * miss resources under isolated or child classloaders.
+ */
+private fun openClasspathResource(name: String): InputStream? =
+  (Thread.currentThread().contextClassLoader
+      ?: InputOutputPair::class.java.classLoader
+      ?: ClassLoader.getSystemClassLoader())
+    .getResourceAsStream(name)
 
 /**
  * Configuration for copying a static resource from classpath to the file system.
@@ -97,37 +110,41 @@ data class InputOutputPair(
  */
 fun InputOutputPair.copyResource() {
   // Validate paths to prevent path traversal attacks
-  // Use proper path normalization to catch all traversal attempts
-  fun validatePath(path: String, name: String) {
-    val normalized = Paths.get(path).normalize()
-    require(!normalized.isAbsolute) { "$name cannot be an absolute path: $path" }
-    require(!normalized.toString().startsWith("..")) {
-      "$name cannot traverse outside base directory: $path"
-    }
-  }
-
-  validatePath(inputFilename, "Input filename")
-  validatePath(outputPath, "Output path")
-  outputFilename?.let { validatePath(it, "Output filename") }
+  validateRelativePath(inputFilename, "Input filename")
+  validateRelativePath(outputPath, "Output path")
+  outputFilename?.let { validateRelativePath(it, "Output filename") }
 
   // use the outputFilename relative to the outputPath, otherwise use the inputFilename
   val candidateOutputFilename = (outputFilename ?: inputFilename).let { "$outputPath/$it" }
-
-  // Create parent directories (thread-safe, creates all parents, idempotent)
   val outputFile = File(candidateOutputFilename)
-  outputFile.parentFile?.let { parent -> Files.createDirectories(parent.toPath()) }
-  ClassLoader.getSystemResourceAsStream(inputFilename)?.asSource()?.buffered()?.use { input ->
-    outputFile.outputStream().asSink().buffered().use { outputFileBuffer ->
-      outputFileBuffer.transferFrom(input)
+
+  // Resolve the resource first; only touch the filesystem once we know it exists, so a missing
+  // resource never leaves empty directories behind.
+  val resource =
+    openClasspathResource(inputFilename)
+      ?: error(
+        "Resource not found in classpath: $inputFilename\n" +
+          "Troubleshooting:\n" +
+          "  1. Verify the file exists in src/main/resources/$inputFilename\n" +
+          "  2. Check that the file is included in your build (not in .gitignore)\n" +
+          "  3. Run './gradlew clean build' to ensure resources are copied\n" +
+          "  4. Verify the path uses forward slashes (/) not backslashes (\\)"
+      )
+
+  resource.asSource().buffered().use { input ->
+    // Create parent directories (thread-safe, creates all parents, idempotent)
+    val parent = outputFile.parentFile
+    parent?.let { Files.createDirectories(it.toPath()) }
+
+    // Write to a temp file in the destination directory, then move it into place. This way a
+    // failure mid-copy (e.g. out of disk) cannot truncate or corrupt an existing output file.
+    val tempFile = File.createTempFile("ssg-", ".tmp", parent ?: File("."))
+    try {
+      tempFile.outputStream().asSink().buffered().use { sink -> sink.transferFrom(input) }
+      Files.move(tempFile.toPath(), outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+    } catch (e: Throwable) {
+      tempFile.delete()
+      throw e
     }
   }
-    ?: error(
-      "Resource not found in classpath: $inputFilename\n" +
-        "Troubleshooting:\n" +
-        "  1. Verify the file exists in src/main/resources/$inputFilename\n" +
-        "  2. Check that the file is included in your build (not in .gitignore)\n" +
-        "  3. Run './gradlew clean build' to ensure resources are copied\n" +
-        "  4. Verify the path uses forward slashes (/) not backslashes (\\)\n" +
-        "ClassLoader searched: ${ClassLoader.getSystemClassLoader()}"
-    )
 }

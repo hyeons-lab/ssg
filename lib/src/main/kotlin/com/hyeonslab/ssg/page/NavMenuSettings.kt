@@ -15,7 +15,13 @@
  */
 package com.hyeonslab.ssg.page
 
+import com.hyeonslab.ssg.utils.validateCssClasses
+import com.hyeonslab.ssg.utils.validateSpacingUnit
+import com.hyeonslab.ssg.utils.validateUrlChars
 import kotlinx.serialization.Serializable
+
+private val INSTAGRAM_USERNAME_REGEX = Regex("^[a-zA-Z0-9._]{1,30}$")
+private val EMAIL_REGEX = Regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
 
 /**
  * Configuration for the navigation menu appearance and behavior.
@@ -40,8 +46,8 @@ import kotlinx.serialization.Serializable
  * @property blurNavBackground Whether to apply backdrop blur effect to navigation (applies
  *   `backdrop-blur-md`)
  * @property fontFamily Tailwind font family class (default: "font-plex-sans")
- * @property horizontalMargin Tailwind spacing unit for left/right margins (default: "16" for
- *   ms-16/me-16)
+ * @property horizontalMargin Tailwind spacing unit for the navigation bar's left/right padding
+ *   (default: "16", applied as `px-16` at all breakpoints)
  * @throws IllegalArgumentException if any CSS class contains invalid characters (prevents injection
  *   attacks)
  * @throws IllegalArgumentException if Instagram username contains invalid characters
@@ -82,27 +88,22 @@ data class NavMenuSettings(
   val blurNavBackground: Boolean,
   val fontFamily: String = "font-plex-sans", // Tailwind font family class (default: IBM Plex Sans)
   val horizontalMargin: String =
-    "16", // Tailwind spacing unit for left/right margins (e.g., "16" for ms-16/me-16)
+    "16", // Tailwind spacing unit for left/right padding (e.g., "16" -> px-16)
 ) {
   init {
     // Validate CSS class strings to prevent HTML attribute injection
-    fun validateCssClasses(classes: String, fieldName: String) {
-      require(classes.matches(Regex("^[a-zA-Z0-9\\s\\-_:/\\[\\].%]+$"))) {
-        "$fieldName contains invalid characters: '$classes'\n" +
-          "Allowed characters: letters, numbers, spaces, hyphens, underscores, colons, slashes, brackets, dots, percent signs\n" +
-          "Valid examples: 'bg-white', 'text-blue-600 hover:text-blue-700', 'w-1/2', 'z-[255]', 'bg-white/90'\n" +
-          "This validation prevents HTML attribute injection attacks."
-      }
-    }
-
     validateCssClasses(backgroundColor, "backgroundColor")
     validateCssClasses(navSelectedColor, "navSelectedColor")
     validateCssClasses(navDefaultColor, "navDefaultColor")
     validateCssClasses(fontFamily, "fontFamily")
 
+    // horizontalMargin is interpolated into the nav class attribute (px-<value>); validate it as a
+    // single spacing token so it cannot inject additional utility classes.
+    validateSpacingUnit(horizontalMargin, "horizontalMargin")
+
     // Validate Instagram username to prevent XSS injection
     instagram?.let { username ->
-      require(username.matches(Regex("^[a-zA-Z0-9._]{1,30}$"))) {
+      require(username.matches(INSTAGRAM_USERNAME_REGEX)) {
         "Invalid Instagram username: '$username'\n" +
           "Format: Must contain only letters, numbers, dots, and underscores (max 30 characters)\n" +
           "Valid examples: 'johndoe', 'jane.doe', 'user_123'\n" +
@@ -112,7 +113,7 @@ data class NavMenuSettings(
 
     // Validate email address to prevent XSS injection
     email?.let { emailAddress ->
-      require(emailAddress.matches(Regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"))) {
+      require(emailAddress.matches(EMAIL_REGEX)) {
         "Invalid email address: '$emailAddress'\n" +
           "Format: Must be a valid email address (e.g., user@example.com)\n" +
           "This validation prevents XSS injection via mailto: links."
@@ -149,17 +150,7 @@ data class NavMenuSettings(
 data class Logo(val imageUrl: String, val width: Int, val height: Int, val altText: String = "") {
   init {
     // Validate logo URL to prevent XSS injection via src attribute
-    require(
-      !imageUrl.contains("\"") &&
-        !imageUrl.contains("'") &&
-        !imageUrl.contains("<") &&
-        !imageUrl.contains(">")
-    ) {
-      "Logo imageUrl contains invalid characters: '$imageUrl'\n" +
-        "Invalid characters: quotes (\", '), angle brackets (<, >)\n" +
-        "Valid examples: 'logo.png', 'images/logo.svg', 'assets/brand/logo.webp'\n" +
-        "This validation prevents XSS injection via src attributes."
-    }
+    validateUrlChars(imageUrl, "Logo imageUrl")
 
     // Validate dimensions are reasonable
     require(width in 1..2000) {

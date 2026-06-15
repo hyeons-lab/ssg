@@ -62,6 +62,7 @@ class ResourcesBuilder {
   private val staticFiles = mutableListOf<InputOutputPair>()
   private val localStylesheets = mutableListOf<String>()
   private val externalStylesheets = mutableListOf<ExternalStylesheet>()
+  private var localStylesheetsDisabled = false
 
   /**
    * Add a static file to be copied from classpath to output directory.
@@ -123,6 +124,25 @@ class ResourcesBuilder {
   }
 
   /**
+   * Opt out of the default `css/tailwind.css` local stylesheet without adding any of your own. Use
+   * this when the site loads its CSS entirely from external stylesheets (e.g. a CDN) and should not
+   * emit a `<link>` to a local file. Without this, an empty `resources { }` block still defaults to
+   * `css/tailwind.css`.
+   *
+   * Example:
+   * ```kotlin
+   * resources {
+   *     externalStylesheet(ExternalStylesheet.TAILWIND_CSS_3_4_17)
+   *     noLocalStylesheets()
+   * }
+   * ```
+   */
+  fun noLocalStylesheets() {
+    localStylesheets.clear()
+    localStylesheetsDisabled = true
+  }
+
+  /**
    * Add an external stylesheet (e.g., CDN) with optional SRI integrity.
    *
    * Example:
@@ -154,7 +174,9 @@ class ResourcesBuilder {
   fun build(): ResourceConfig {
     return ResourceConfig(
       staticFiles = staticFiles.toList(),
-      localStylesheets = localStylesheets.ifEmpty { listOf("css/tailwind.css") },
+      localStylesheets =
+        if (localStylesheetsDisabled) emptyList()
+        else localStylesheets.ifEmpty { listOf("css/tailwind.css") },
       externalStylesheets = externalStylesheets.toList(),
     )
   }

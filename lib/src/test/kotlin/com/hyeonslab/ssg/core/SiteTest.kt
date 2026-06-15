@@ -100,6 +100,43 @@ class SiteTest :
       }
     }
 
+    context("page outputFilename validation") {
+      test("should reject duplicate page outputFilenames") {
+        val exception =
+          shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test-output", pages = listOf(homePage, homePage))
+          }
+        exception.message shouldContain "Duplicate page outputFilename"
+      }
+
+      test("should reject a page outputFilename that traverses outside the output directory") {
+        val evilPage =
+          object : Page {
+            override val title = "Evil"
+            override val outputFilename = "../evil.html"
+            override val content = { _: PageSettings, _: kotlinx.html.FlowContent -> }
+          }
+        val exception =
+          shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test-output", pages = listOf(evilPage))
+          }
+        exception.message shouldContain "cannot traverse outside base directory"
+      }
+    }
+
+    context("site version meta tag") {
+      test("should render the site version as a meta tag") {
+        val outputPath = "build/test-version-meta"
+        createTestSite(outputPath).generateFiles()
+
+        val html = File("$outputPath/index.html").readText()
+        html shouldContain "name=\"version\""
+        html shouldContain "0.1.0-test"
+
+        File(outputPath).deleteRecursively()
+      }
+    }
+
     context("CSS class validation") {
       test("should accept valid Tailwind CSS classes") {
         val validClasses =

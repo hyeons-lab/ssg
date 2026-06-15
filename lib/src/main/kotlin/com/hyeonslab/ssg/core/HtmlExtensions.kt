@@ -22,6 +22,9 @@ import kotlinx.html.classes
 import kotlinx.html.script
 import kotlinx.html.unsafe
 
+/** Valid Google Tag IDs: `G-` (GA4) or `GT-` followed by 7–12 uppercase alphanumeric characters. */
+private val GOOGLE_TAG_REGEX = Regex("^(G|GT)-[A-Z0-9]{7,12}$")
+
 /**
  * Adds Google Tag Manager / Google Analytics 4 tracking code to the HTML head.
  *
@@ -57,7 +60,7 @@ fun HEAD.googleTag(tag: String = "") {
     ?.let {
       // Validate Google Tag ID format to prevent XSS injection
       // Valid formats: G-XXXXXXXXXX (Google Analytics 4) or GT-XXXXXXXX (Google Tag)
-      require(tag.matches(Regex("^(G|GT)-[A-Z0-9]{7,12}$"))) {
+      require(tag.matches(GOOGLE_TAG_REGEX)) {
         "Invalid Google Tag ID format: '$tag'. Expected format: G-XXXXXXXXXX or GT-XXXXXXXX"
       }
 
@@ -66,7 +69,7 @@ fun HEAD.googleTag(tag: String = "") {
         src = "https://www.googletagmanager.com/gtag/js?id=$tag"
       }
       script {
-        // SAFETY: Tag ID is validated by strict regex on line 14 to prevent XSS injection
+        // SAFETY: Tag ID is validated by GOOGLE_TAG_REGEX above to prevent XSS injection
         // Valid formats: G-XXXXXXXXXX or GT-XXXXXXXX (uppercase alphanumeric only)
         // The unsafe block is necessary here because kotlinx.html doesn't support
         // inserting raw JavaScript code through safe APIs.
