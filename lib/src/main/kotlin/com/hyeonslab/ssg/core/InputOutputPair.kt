@@ -18,6 +18,7 @@ package com.hyeonslab.ssg.core
 import com.hyeonslab.ssg.utils.validateRelativePath
 import java.io.File
 import java.io.InputStream
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import kotlin.use
@@ -141,7 +142,18 @@ fun InputOutputPair.copyResource() {
     val tempFile = File.createTempFile("ssg-", ".tmp", parent ?: File("."))
     try {
       tempFile.outputStream().asSink().buffered().use { sink -> sink.transferFrom(input) }
-      Files.move(tempFile.toPath(), outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+      // Prefer an atomic move so the output file is never observed half-written. Not all
+      // filesystems support ATOMIC_MOVE, so fall back to a plain replacing move when they don't.
+      try {
+        Files.move(
+          tempFile.toPath(),
+          outputFile.toPath(),
+          StandardCopyOption.ATOMIC_MOVE,
+          StandardCopyOption.REPLACE_EXISTING,
+        )
+      } catch (_: AtomicMoveNotSupportedException) {
+        Files.move(tempFile.toPath(), outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+      }
     } catch (e: Throwable) {
       tempFile.delete()
       throw e

@@ -129,6 +129,10 @@ class ResourcesBuilder {
    * emit a `<link>` to a local file. Without this, an empty `resources { }` block still defaults to
    * `css/tailwind.css`.
    *
+   * This only suppresses the default — explicitly-added local stylesheets always win regardless of
+   * call ordering, so `localStylesheet("css/custom.css")` still takes effect even if
+   * `noLocalStylesheets()` is also called.
+   *
    * Example:
    * ```kotlin
    * resources {
@@ -138,7 +142,6 @@ class ResourcesBuilder {
    * ```
    */
   fun noLocalStylesheets() {
-    localStylesheets.clear()
     localStylesheetsDisabled = true
   }
 
@@ -175,8 +178,9 @@ class ResourcesBuilder {
     return ResourceConfig(
       staticFiles = staticFiles.toList(),
       localStylesheets =
-        if (localStylesheetsDisabled) emptyList()
-        else localStylesheets.ifEmpty { listOf("css/tailwind.css") },
+        localStylesheets.ifEmpty {
+          if (localStylesheetsDisabled) emptyList() else listOf("css/tailwind.css")
+        },
       externalStylesheets = externalStylesheets.toList(),
     )
   }

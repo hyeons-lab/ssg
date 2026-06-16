@@ -348,6 +348,21 @@ class SiteDslTest :
 
         site.resources.localStylesheets shouldBe emptyList()
       }
+
+      test("explicitly added local stylesheets win over noLocalStylesheets regardless of order") {
+        val site = site {
+          outputPath = "build/test"
+          title = "Test"
+          pages = listOf(homePage)
+
+          resources {
+            noLocalStylesheets()
+            localStylesheet("css/custom.css")
+          }
+        }
+
+        site.resources.localStylesheets shouldBe listOf("css/custom.css")
+      }
     }
 
     context("integrations DSL") {

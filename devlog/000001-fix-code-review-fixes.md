@@ -65,6 +65,19 @@ surfaced 12 findings; all fixed in this same branch/PR.
   added coverage for URL-encoding/XML-escaping, deterministic lastmod, `og:type`, blank-title
   fallback, and `generate()`. `./gradlew build` green (115 test blocks).
 
+Copilot's PR #4 review left 3 comments; all addressed in this branch.
+
+- 2026-06-15T20:48-0700 `utils/Validation.kt` — `validateRelativePath` now uses segment-based
+  `Path.startsWith("..")` instead of `toString().startsWith("..")`, so a valid name whose first
+  segment merely begins with ".." (e.g. `..hidden/logo.png`) is no longer falsely rejected.
+- 2026-06-15T20:48-0700 `core/InputOutputPair.kt` — resource copy now attempts `ATOMIC_MOVE` and
+  falls back to a plain `REPLACE_EXISTING` move on `AtomicMoveNotSupportedException`, delivering the
+  stronger no-half-written-file guarantee where the filesystem supports it.
+- 2026-06-15T20:48-0700 `core/dsl/ResourcesDsl.kt` — `noLocalStylesheets()` only sets the disable
+  flag (no longer clears the list); `build()` lets any explicitly-added local stylesheets win
+  regardless of call order, falling back to the flag/default only when none were added. Added a
+  DSL test for the ordering. `:lib:test` green.
+
 ## Issues
 
 - Review was performed against stale local `main`; discovered the divergence only when the worktree
@@ -86,4 +99,5 @@ surfaced 12 findings; all fixed in this same branch/PR.
 ## Commits
 
 - 283df24 — fix: address code-review findings (validation, resource copy, nav layout)
-- HEAD — fix(seo): harden SEO output (sitemap escaping/encoding, JSON-LD, og:type, generate())
+- 4d8050f — fix(seo): harden SEO output (sitemap escaping/encoding, JSON-LD, og:type, generate())
+- HEAD — fix: address Copilot PR #4 review (path-segment traversal check, atomic move, stylesheet ordering)

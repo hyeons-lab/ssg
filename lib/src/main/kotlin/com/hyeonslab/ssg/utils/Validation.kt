@@ -80,7 +80,7 @@ internal fun validateUrlChars(url: String, fieldName: String) {
 internal fun validateRelativePath(path: String, name: String) {
   val normalized = Paths.get(path).normalize()
   require(!normalized.isAbsolute) { "$name cannot be an absolute path: $path" }
-  require(!normalized.toString().startsWith("..")) {
-    "$name cannot traverse outside base directory: $path"
-  }
+  // Compare path segments, not the string prefix, so a valid name like "..hidden/logo.png"
+  // (whose first segment merely starts with "..") is not mistaken for a parent traversal.
+  require(!normalized.startsWith("..")) { "$name cannot traverse outside base directory: $path" }
 }
