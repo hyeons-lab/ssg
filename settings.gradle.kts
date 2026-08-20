@@ -3,6 +3,7 @@ rootProject.name = "ssg"
 
 // Plugin management - configure repositories for plugin resolution
 pluginManagement {
+    includeBuild("vendor/gradle-tailwind/plugin")
     repositories {
         mavenLocal()
         mavenCentral()

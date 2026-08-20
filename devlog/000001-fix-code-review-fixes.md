@@ -78,6 +78,11 @@ Copilot's PR #4 review left 3 comments; all addressed in this branch.
   regardless of call order, falling back to the flag/default only when none were added. Added a
   DSL test for the ordering. `:lib:test` green.
 
+- 2026-08-19T11:13-0700 Vendor `gradle-tailwind` fork as a git submodule at `vendor/gradle-tailwind`
+  and include its `plugin` module via composite build (`includeBuild`) in `settings.gradle.kts`.
+  Updated GitHub Actions workflows (`build.yml`, `publish.yml`) to checkout submodules recursively.
+  `./gradlew build` green.
+
 ## Issues
 
 - Review was performed against stale local `main`; discovered the divergence only when the worktree
@@ -100,4 +105,5 @@ Copilot's PR #4 review left 3 comments; all addressed in this branch.
 
 - 283df24 — fix: address code-review findings (validation, resource copy, nav layout)
 - 4d8050f — fix(seo): harden SEO output (sitemap escaping/encoding, JSON-LD, og:type, generate())
-- HEAD — fix: address Copilot PR #4 review (path-segment traversal check, atomic move, stylesheet ordering)
+- 636fa0c — fix: address Copilot PR #4 review (path-segment traversal check, atomic move, stylesheet ordering)
+- HEAD — build: vendor gradle-tailwind fork as git submodule with composite build
