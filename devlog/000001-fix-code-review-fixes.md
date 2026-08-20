@@ -82,6 +82,8 @@ Copilot's PR #4 review left 3 comments; all addressed in this branch.
   and include its `plugin` module via composite build (`includeBuild`) in `settings.gradle.kts`.
   Updated GitHub Actions workflows (`build.yml`, `publish.yml`) to checkout submodules recursively.
   `./gradlew build` green.
+- 2026-08-19T20:00-0700 Update `README.md` Tailwind version to `4.3.3` and document the single-pass
+  build pipeline pattern (`output = "build/generated_html/css/tailwind.css"`).
 
 ## Issues
 
@@ -106,4 +108,5 @@ Copilot's PR #4 review left 3 comments; all addressed in this branch.
 - 283df24 — fix: address code-review findings (validation, resource copy, nav layout)
 - 4d8050f — fix(seo): harden SEO output (sitemap escaping/encoding, JSON-LD, og:type, generate())
 - 636fa0c — fix: address Copilot PR #4 review (path-segment traversal check, atomic move, stylesheet ordering)
-- HEAD — build: vendor gradle-tailwind fork as git submodule with composite build
+- 61630b1 — build: vendor gradle-tailwind fork as git submodule with composite build
+- HEAD — docs: update Tailwind version to 4.3.3 and document single-pass build workflow
