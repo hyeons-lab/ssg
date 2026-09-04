@@ -446,8 +446,8 @@ class NavMenuTest :
           }
         }
 
-        html shouldContain "px-4"
-        html shouldContain "md:px-16"
+        html shouldContain "px-16"
+        html shouldNotContain "md:px-"
       }
 
       test("should apply custom horizontal padding") {
@@ -472,8 +472,34 @@ class NavMenuTest :
           }
         }
 
-        html shouldContain "px-4"
-        html shouldContain "md:px-8"
+        html shouldContain "px-8"
+        html shouldNotContain "md:px-"
+      }
+
+      test("should link logo to the first page when it is not index.html") {
+        val html = buildString {
+          appendHTML().html {
+            body {
+              navMenu(
+                selected = aboutPage,
+                pages = listOf(aboutPage, contactPage),
+                navMenuSettings =
+                  NavMenuSettings(
+                    backgroundColor = "bg-white",
+                    navSelectedColor = "text-blue-600",
+                    navDefaultColor = "text-gray-700",
+                    isSticky = false,
+                    logo = Logo(imageUrl = "logo.png", width = 50, height = 50),
+                    blurNavBackground = false,
+                  ),
+              )
+            }
+          }
+        }
+
+        // Logo links to the first page (about.html), not a hardcoded index.html
+        html shouldContain "href=\"./about.html\""
+        html shouldNotContain "index.html"
       }
     }
   })

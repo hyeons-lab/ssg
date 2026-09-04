@@ -7,6 +7,38 @@ import io.kotest.matchers.string.shouldContain
 
 class NavMenuSettingsTest :
   FunSpec({
+    context("horizontalMargin validation") {
+      test("should accept a plain spacing token") {
+        val settings =
+          NavMenuSettings(
+            backgroundColor = "bg-white",
+            navSelectedColor = "text-blue-600",
+            navDefaultColor = "text-gray-700",
+            isSticky = false,
+            logo = Logo(imageUrl = "logo.png", width = 50, height = 50),
+            blurNavBackground = false,
+            horizontalMargin = "24",
+          )
+        settings.horizontalMargin shouldBe "24"
+      }
+
+      test("should reject horizontalMargin containing spaces (class injection)") {
+        val exception =
+          shouldThrow<IllegalArgumentException> {
+            NavMenuSettings(
+              backgroundColor = "bg-white",
+              navSelectedColor = "text-blue-600",
+              navDefaultColor = "text-gray-700",
+              isSticky = false,
+              logo = Logo(imageUrl = "logo.png", width = 50, height = 50),
+              blurNavBackground = false,
+              horizontalMargin = "16 hidden",
+            )
+          }
+        exception.message shouldContain "horizontalMargin"
+      }
+    }
+
     context("Instagram username validation") {
       test("should accept valid Instagram usernames") {
         val validUsernames =

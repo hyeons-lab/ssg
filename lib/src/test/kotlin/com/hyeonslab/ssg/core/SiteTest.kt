@@ -100,6 +100,43 @@ class SiteTest :
       }
     }
 
+    context("page outputFilename validation") {
+      test("should reject duplicate page outputFilenames") {
+        val exception =
+          shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test-output", pages = listOf(homePage, homePage))
+          }
+        exception.message shouldContain "Duplicate page outputFilename"
+      }
+
+      test("should reject a page outputFilename that traverses outside the output directory") {
+        val evilPage =
+          object : Page {
+            override val title = "Evil"
+            override val outputFilename = "../evil.html"
+            override val content = { _: PageSettings, _: kotlinx.html.FlowContent -> }
+          }
+        val exception =
+          shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test-output", pages = listOf(evilPage))
+          }
+        exception.message shouldContain "cannot traverse outside base directory"
+      }
+    }
+
+    context("site version meta tag") {
+      test("should render the site version as a meta tag") {
+        val outputPath = "build/test-version-meta"
+        createTestSite(outputPath).generateFiles()
+
+        val html = File("$outputPath/index.html").readText()
+        html shouldContain "name=\"version\""
+        html shouldContain "0.1.0-test"
+
+        File(outputPath).deleteRecursively()
+      }
+    }
+
     context("CSS class validation") {
       test("should accept valid Tailwind CSS classes") {
         val validClasses =
@@ -742,7 +779,7 @@ class SiteTest :
         File(outputPath).deleteRecursively()
       }
 
-      test("should escape </script> in structuredData to prevent tag break") {
+      test("should escape angle brackets in structuredData to prevent tag break") {
         val jsonWithScript =
           """{"@context":"https://schema.org","name":"</script><script>alert(1)</script>"}"""
         val pageWithDangerousSchema =
@@ -759,7 +796,8 @@ class SiteTest :
         site.generateFiles()
         val html = File("$outputPath/dangerous-schema.html").readText()
         html shouldNotContain "</script><script>"
-        html shouldContain "<\\/script>"
+        // '<' and '>' are escaped to their JSON unicode escapes, so no raw script tag survives
+        html shouldContain "\\u003cscript\\u003e"
         File(outputPath).deleteRecursively()
       }
 
@@ -773,8 +811,44 @@ class SiteTest :
       }
     }
 
+    context("per-page SEO edge cases") {
+      test("should use the page's ogType when provided") {
+        val articlePage =
+          object : Page {
+            override val title = "Post"
+            override val outputFilename = "post.html"
+            override val ogType = "article"
+            override val content = { _: PageSettings, _: kotlinx.html.FlowContent -> }
+          }
+        val outputPath = "build/test-ogtype"
+        val site =
+          createTestSite(outputPath, pages = listOf(articlePage), baseUrl = "https://x.com")
+        site.generateFiles()
+        val html = File("$outputPath/post.html").readText()
+        html shouldContain "og:type"
+        html shouldContain "content=\"article\""
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should fall back to the site title when pageTitle is blank") {
+        val blankTitlePage =
+          object : Page {
+            override val title = "Blank"
+            override val outputFilename = "blank-title.html"
+            override val pageTitle = ""
+            override val content = { _: PageSettings, _: kotlinx.html.FlowContent -> }
+          }
+        val outputPath = "build/test-blank-title"
+        val site = createTestSite(outputPath, pages = listOf(blankTitlePage))
+        site.generateFiles()
+        val html = File("$outputPath/blank-title.html").readText()
+        html shouldContain "<title>Test Site</title>"
+        File(outputPath).deleteRecursively()
+      }
+    }
+
     context("generateSitemap()") {
-      test("should generate sitemap.xml with all page URLs") {
+      test("should generate sitemap.xml with all page URLs and the given lastmod") {
         val outputPath = "build/test-sitemap"
         val site =
           createTestSite(
@@ -782,11 +856,36 @@ class SiteTest :
             pages = listOf(homePage, aboutPage),
             baseUrl = "https://example.com",
           )
-        site.generateSitemap()
+        site.generateSitemap(java.time.LocalDate.of(2026, 1, 1))
         val sitemap = File("$outputPath/sitemap.xml").readText()
         sitemap shouldContain "https://example.com/"
         sitemap shouldContain "https://example.com/about.html"
-        sitemap shouldContain "<lastmod>"
+        sitemap shouldContain "<lastmod>2026-01-01</lastmod>"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should omit lastmod by default for deterministic output") {
+        val outputPath = "build/test-sitemap-nolastmod"
+        val site = createTestSite(outputPath, baseUrl = "https://example.com")
+        site.generateSitemap()
+        val sitemap = File("$outputPath/sitemap.xml").readText()
+        sitemap shouldNotContain "<lastmod>"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should URL-encode and XML-escape loc values") {
+        val spacedPage =
+          object : Page {
+            override val title = "Spaced"
+            override val outputFilename = "my page.html"
+            override val content = { _: PageSettings, _: kotlinx.html.FlowContent -> }
+          }
+        val outputPath = "build/test-sitemap-encode"
+        val site = createTestSite(outputPath, pages = listOf(spacedPage), baseUrl = "https://x.com")
+        site.generateSitemap()
+        val sitemap = File("$outputPath/sitemap.xml").readText()
+        sitemap shouldContain "https://x.com/my%20page.html"
+        sitemap shouldNotContain "my page.html"
         File(outputPath).deleteRecursively()
       }
 
@@ -806,7 +905,7 @@ class SiteTest :
         site.generateRobotsTxt()
         val robots = File("$outputPath/robots.txt").readText()
         robots shouldContain "User-agent: *"
-        robots shouldContain "Allow: /"
+        robots shouldContain "Disallow:"
         robots shouldContain "Sitemap: https://example.com/sitemap.xml"
         File(outputPath).deleteRecursively()
       }
@@ -815,6 +914,28 @@ class SiteTest :
         val outputPath = "build/test-robots-no-base"
         val site = createTestSite(outputPath)
         site.generateRobotsTxt()
+        File("$outputPath/robots.txt").exists() shouldBe false
+        File(outputPath).deleteRecursively()
+      }
+    }
+
+    context("generate() convenience") {
+      test("should produce pages, sitemap, and robots.txt together when baseUrl is set") {
+        val outputPath = "build/test-generate-all"
+        val site = createTestSite(outputPath, baseUrl = "https://example.com")
+        site.generate()
+        File("$outputPath/index.html").exists() shouldBe true
+        File("$outputPath/sitemap.xml").exists() shouldBe true
+        File("$outputPath/robots.txt").exists() shouldBe true
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should produce only pages when baseUrl is not set") {
+        val outputPath = "build/test-generate-nobase"
+        val site = createTestSite(outputPath)
+        site.generate()
+        File("$outputPath/index.html").exists() shouldBe true
+        File("$outputPath/sitemap.xml").exists() shouldBe false
         File("$outputPath/robots.txt").exists() shouldBe false
         File(outputPath).deleteRecursively()
       }

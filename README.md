@@ -100,12 +100,15 @@ plugins {
 }
 
 tailwind {
-    version = "4.1.18"
+    version = "4.3.3"
     configPath = "src/main/resources"
     input = "src/main/resources/tailwind/input.css"
-    output = "src/main/resources/css/tailwind.css"
+    // Output directly to generated site directory for single-pass builds
+    output = "build/generated_html/css/tailwind.css"
 }
 ```
+
+> **Tip (Single-Pass Build)**: Configuring `output = "build/generated_html/css/tailwind.css"` generates the compiled stylesheet directly in the target output directory during `tailwindCompile`. This eliminates the need to compile twice, ensuring HTML and CSS are completely synchronized in a single pass.
 
 #### 2. Create Tailwind Configuration
 
@@ -149,7 +152,7 @@ Create `src/main/resources/tailwind/input.css`:
 
 ### Build Process
 
-The typical workflow for building a site:
+The typical single-pass workflow for building a site:
 
 ```bash
 # 1. Download Tailwind CLI (first time only)
@@ -158,14 +161,25 @@ The typical workflow for building a site:
 # 2. Initialize Tailwind (first time only)
 ./gradlew tailwindInit
 
-# 3. Generate HTML files (runs your main() function)
+# 3. Generate HTML files & copy static assets (runs your main() function)
 ./gradlew run
 
-# 4. Compile Tailwind CSS (scans generated HTML and creates CSS)
+# 4. Compile Tailwind CSS (scans generated HTML and creates CSS directly in build output)
 ./gradlew tailwindCompile
 ```
 
-You can automate this with a build script:
+You can automate this in Gradle `build.gradle.kts`:
+
+```kotlin
+tasks.register("generate") {
+    group = "application"
+    description = "Generate site HTML and compile Tailwind CSS in a single pass"
+    dependsOn("run")
+    finalizedBy("tailwindCompile")
+}
+```
+
+Or via a build script:
 
 ```bash
 #!/bin/bash

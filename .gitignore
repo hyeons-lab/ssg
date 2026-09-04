@@ -45,5 +45,6 @@ bin/
 ### Mac OS ###
 .DS_Store
 
-### Claude Code ###
+### Claude Code & Agents ###
 .claude/
+.agents/

@@ -333,6 +333,36 @@ class SiteDslTest :
 
         site.resources.externalStylesheets.size shouldBe 2
       }
+
+      test("noLocalStylesheets should produce an empty local stylesheet list") {
+        val site = site {
+          outputPath = "build/test"
+          title = "Test"
+          pages = listOf(homePage)
+
+          resources {
+            externalStylesheet(ExternalStylesheet.TAILWIND_CSS_3_4_17)
+            noLocalStylesheets()
+          }
+        }
+
+        site.resources.localStylesheets shouldBe emptyList()
+      }
+
+      test("explicitly added local stylesheets win over noLocalStylesheets regardless of order") {
+        val site = site {
+          outputPath = "build/test"
+          title = "Test"
+          pages = listOf(homePage)
+
+          resources {
+            noLocalStylesheets()
+            localStylesheet("css/custom.css")
+          }
+        }
+
+        site.resources.localStylesheets shouldBe listOf("css/custom.css")
+      }
     }
 
     context("integrations DSL") {

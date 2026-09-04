@@ -67,11 +67,13 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
   val sticky = if (navMenuSettings.isSticky) "sticky" else ""
   val blur = if (navMenuSettings.blurNavBackground) "backdrop-blur-md" else ""
 
+  val homeFilename = pages.firstOrNull()?.outputFilename ?: "index.html"
+
   nav(
     classes =
-      "$blur $sticky z-[255] ${navMenuSettings.fontFamily} flex w-full py-4 px-4 sm:px-8 md:px-${navMenuSettings.horizontalMargin} ${navMenuSettings.backgroundColor}"
+      "$blur $sticky z-[255] ${navMenuSettings.fontFamily} flex w-full py-4 px-${navMenuSettings.horizontalMargin} ${navMenuSettings.backgroundColor}"
   ) {
-    a(href = "./index.html") {
+    a(href = "./$homeFilename") {
       div {
         style = "height: ${navMenuSettings.logo.height}px; width: ${navMenuSettings.logo.width}px;"
         img(src = navMenuSettings.logo.imageUrl, alt = navMenuSettings.logo.altText) {
@@ -91,7 +93,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
           navMenuSettings.navSelectedColor,
           navMenuSettings.navDefaultColor,
         )
-        a(classes = "uppercase z-1 mx-1 md:mx-2 text-nowrap", href = "./${page.outputFilename}") {
+        a(classes = "uppercase mx-1 md:mx-2 text-nowrap", href = "./${page.outputFilename}") {
           +page.title
         }
       }
