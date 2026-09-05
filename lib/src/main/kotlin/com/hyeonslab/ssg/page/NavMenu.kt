@@ -17,6 +17,7 @@ package com.hyeonslab.ssg.page
 
 import com.hyeonslab.ssg.core.adjustSelected
 import com.hyeonslab.ssg.utils.Tailwind
+import com.hyeonslab.ssg.utils.encodeUrlPath
 import kotlinx.html.BODY
 import kotlinx.html.a
 import kotlinx.html.div
@@ -63,17 +64,31 @@ import kotlinx.html.style
  * }
  * ```
  */
+/** Computes a relative href from the currently active page to a target page filename. */
+private fun relativePageHref(fromPage: Page, targetFilename: String): String {
+  val normalizedFrom = fromPage.outputFilename.replace('\\', '/')
+  val depth = normalizedFrom.count { it == '/' }
+  val prefix = if (depth == 0) "./" else "../".repeat(depth)
+  return "$prefix${encodeUrlPath(targetFilename)}"
+}
+
 fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSettings) {
-  val sticky = if (navMenuSettings.isSticky) "sticky" else ""
-  val blur = if (navMenuSettings.blurNavBackground) "backdrop-blur-md" else ""
+  val navClasses =
+    buildList {
+        if (navMenuSettings.blurNavBackground) add("backdrop-blur-md")
+        if (navMenuSettings.isSticky) add("sticky top-0")
+        add("z-[255]")
+        add(navMenuSettings.fontFamily)
+        add("flex w-full py-4")
+        add("px-${navMenuSettings.horizontalMargin}")
+        add(navMenuSettings.backgroundColor)
+      }
+      .joinToString(" ")
 
   val homeFilename = pages.firstOrNull()?.outputFilename ?: "index.html"
 
-  nav(
-    classes =
-      "$blur $sticky z-[255] ${navMenuSettings.fontFamily} flex w-full py-4 px-${navMenuSettings.horizontalMargin} ${navMenuSettings.backgroundColor}"
-  ) {
-    a(href = "./$homeFilename") {
+  nav(classes = navClasses) {
+    a(href = relativePageHref(selected, homeFilename)) {
       div {
         style = "height: ${navMenuSettings.logo.height}px; width: ${navMenuSettings.logo.width}px;"
         img(src = navMenuSettings.logo.imageUrl, alt = navMenuSettings.logo.altText) {
@@ -93,7 +108,10 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
           navMenuSettings.navSelectedColor,
           navMenuSettings.navDefaultColor,
         )
-        a(classes = "uppercase mx-1 md:mx-2 text-nowrap", href = "./${page.outputFilename}") {
+        a(
+          classes = "uppercase mx-1 md:mx-2 text-nowrap",
+          href = relativePageHref(selected, page.outputFilename),
+        ) {
           +page.title
         }
       }
@@ -101,7 +119,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
 
     div(classes = "grow")
 
-    // Social media links - wrapped in flex container for proper spacing
+    // Social media links: wrapped in flex container for proper spacing
     div(classes = "flex gap-4 py-4") {
       navMenuSettings.instagram?.let { username ->
         val instagramUrl = "https://www.instagram.com/$username"
@@ -110,6 +128,8 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
           classes =
             "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm.size} md:text-base lg:text-lg",
         ) {
+          attributes["aria-label"] = "Instagram"
+          attributes["rel"] = "noopener noreferrer"
           i(classes = "fa-brands fa-instagram")
         }
       }
@@ -119,6 +139,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
           classes =
             "${navMenuSettings.navDefaultColor} ${Tailwind.Text.Size.sm.size} md:text-base lg:text-lg",
         ) {
+          attributes["aria-label"] = "Email"
           i(classes = "fa-regular fa-envelope")
         }
       }

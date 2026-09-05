@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ main, feature/* ]
+    branches: [ main, feat/**, fix/**, refactor/**, test/**, ci/**, chore/**, build/** ]
   pull_request:
     branches: [ main ]
 
@@ -12,7 +12,6 @@ jobs:
 
     permissions:
       contents: read
-      pull-requests: write
 
     steps:
       - name: Checkout code

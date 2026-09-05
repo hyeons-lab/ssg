@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Prepend HTML5 `<!DOCTYPE html>` to all generated HTML pages to enforce Standards Mode.
+- Atomic file writes for generated pages, sitemap.xml, and robots.txt using temporary files with atomic move fallback.
+- Automatic intermediate directory creation for nested page output paths (e.g. `docs/guide.html`).
+- Depth-aware relative link computation (`../`) and URL-encoding for navigation links on nested pages.
+- Serialization support (`@Serializable`) on `Tailwind.Colors.Text` and concrete color variants.
+- Sticky navigation threshold class `top-0` when `isSticky` is enabled.
+- Accessibility `aria-label` and `rel="noopener noreferrer"` attributes on navigation social links.
+- Convenience `logo(Logo)` overload and default color values in navigation DSL builder.
+- Directory existence check in `settings.gradle.kts` for submodule composite builds.
+
+### Changed
+- Deprecated `ExternalStylesheet.TAILWIND_CSS_3_4_17` because Tailwind Play CDN serves JavaScript rather than CSS.
+- Optimized `Encoding.escapeXml` with zero-allocation fast path and single-pass builder.
+- Streamlined `InputOutputPair` copying with direct `Files.copy`.
+- Broadened CI branch trigger patterns to support conventional branch names.
+
+### Fixed
+- Path traversal validation now rejects Windows drive-relative root paths, drive specifiers, and blank paths.
+- CSS class validation now supports Tailwind arbitrary values and modifiers containing `#`, `!`, `@`, commas, parentheses, `*`, and `&`.
+- Classloader resource lookup in `InputOutputPair` now sequentially falls back when a classloader does not contain the resource.
+- URL validation rejects unencoded newlines and blank URLs.
+
 ## [0.1.0] - 2026-02-08
 
 ### Added

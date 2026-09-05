@@ -21,13 +21,23 @@ import java.net.URLEncoder
  * Escapes a string for safe inclusion in XML element text or attribute values. `&` is replaced
  * first so the entities introduced for the other characters are not double-escaped.
  */
-internal fun escapeXml(value: String): String =
-  value
-    .replace("&", "&amp;")
-    .replace("<", "&lt;")
-    .replace(">", "&gt;")
-    .replace("\"", "&quot;")
-    .replace("'", "&apos;")
+internal fun escapeXml(value: String): String {
+  if (value.none { it == '&' || it == '<' || it == '>' || it == '"' || it == '\'' }) {
+    return value
+  }
+  return buildString(value.length + 16) {
+    for (ch in value) {
+      when (ch) {
+        '&' -> append("&amp;")
+        '<' -> append("&lt;")
+        '>' -> append("&gt;")
+        '"' -> append("&quot;")
+        '\'' -> append("&apos;")
+        else -> append(ch)
+      }
+    }
+  }
+}
 
 /**
  * Percent-encodes each segment of a relative URL path while preserving `/` separators, so filenames

@@ -4,17 +4,21 @@ import com.hyeonslab.ssg.page.Logo
 import com.hyeonslab.ssg.page.NavMenuSettings
 import com.hyeonslab.ssg.page.Page
 import com.hyeonslab.ssg.page.PageSettings
+import com.hyeonslab.ssg.utils.Tailwind
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
+import io.kotest.matchers.string.shouldStartWith
 import java.io.File
 import java.nio.file.Files
 import kotlin.io.path.Path
 import kotlinx.html.div
 import kotlinx.html.h1
 import kotlinx.html.p
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class SiteTest :
   FunSpec({
@@ -124,6 +128,50 @@ class SiteTest :
       }
     }
 
+    context("outputPath validation") {
+      test("should reject absolute or traversing outputPath") {
+        val absException = shouldThrow<IllegalArgumentException> { createTestSite("/etc/ssg") }
+        absException.message shouldContain "cannot be an absolute path"
+
+        val travException = shouldThrow<IllegalArgumentException> { createTestSite("../../dist") }
+        travException.message shouldContain "cannot traverse outside base directory"
+
+        val blankException = shouldThrow<IllegalArgumentException> { createTestSite("") }
+        blankException.message shouldContain "cannot be blank"
+      }
+    }
+
+    context("stylesheet validation") {
+      test("should reject absolute or traversing local stylesheets") {
+        val exception =
+          shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test-output", localStylesheets = listOf("/etc/style.css"))
+          }
+        exception.message shouldContain "cannot be an absolute path"
+      }
+
+      test("should reject external stylesheets with invalid URL characters") {
+        val exception =
+          shouldThrow<IllegalArgumentException> {
+            createTestSite(
+              "build/test-output",
+              externalStylesheets =
+                listOf(ExternalStylesheet(href = "https://example.com/\" onclick=\"alert(1)")),
+            )
+          }
+        exception.message shouldContain "contains invalid characters"
+      }
+    }
+
+    context("serialization") {
+      test("should serialize and deserialize PageSettings and TextConfig") {
+        val settings = PageSettings(bodyTextColor = Tailwind.Colors.Text.Custom("text-red-500"))
+        val json = Json.encodeToString(settings)
+        val decoded = Json.decodeFromString<PageSettings>(json)
+        decoded.bodyTextColor.color shouldBe "text-red-500"
+      }
+    }
+
     context("site version meta tag") {
       test("should render the site version as a meta tag") {
         val outputPath = "build/test-version-meta"
@@ -148,6 +196,13 @@ class SiteTest :
             "bg-white/90",
             "text-sm md:text-base lg:text-lg",
             "flex flex-col items-center",
+            "bg-[#1da1f2]",
+            "!flex",
+            "@container",
+            "w-[calc(100%-1rem)]",
+            "grid-cols-[1fr,2fr]",
+            "*:p-4",
+            "[&_p]:mt-2",
           )
 
         validClasses.forEach { classes ->
@@ -361,6 +416,34 @@ class SiteTest :
         Files.exists(Path(outputPath)) shouldBe true
       }
 
+      test("should include HTML5 <!DOCTYPE html> declaration") {
+        val outputPath = "build/test-output"
+        val site = createTestSite(outputPath)
+        site.generateFiles()
+
+        val html = File("$outputPath/index.html").readText()
+        html shouldStartWith "<!DOCTYPE html>"
+      }
+
+      test("should generate pages with nested subdirectories in outputFilename") {
+        val nestedPage =
+          object : Page {
+            override val title = "Nested Page"
+            override val outputFilename = "docs/nested/guide.html"
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { h1 { +"Nested Guide" } }
+            }
+          }
+        val outputPath = "build/test-nested-subdirs"
+        val site = createTestSite(outputPath, pages = listOf(nestedPage))
+        site.generateFiles()
+
+        val nestedFile = File("$outputPath/docs/nested/guide.html")
+        nestedFile.exists() shouldBe true
+        nestedFile.readText() shouldContain "Nested Guide"
+        File(outputPath).deleteRecursively()
+      }
+
       test("should generate HTML file for each page") {
         val outputPath = "build/test-output"
         val site = createTestSite(outputPath, pages = listOf(homePage, aboutPage))
@@ -478,11 +561,17 @@ class SiteTest :
       }
 
       test("should throw error when output directory creation fails") {
-        // Use an invalid path that will fail to create
-        val site = createTestSite("/invalid/path/that/cannot/be/created")
+        val blockingFile = File("build/test-dir-creation-failure")
+        blockingFile.parentFile?.mkdirs()
+        blockingFile.createNewFile()
+        try {
+          val site = createTestSite("${blockingFile.path}/child-dir")
 
-        val exception = shouldThrow<IllegalStateException> { site.generateFiles() }
-        exception.message shouldContain "Failed to create output directory"
+          val exception = shouldThrow<IllegalStateException> { site.generateFiles() }
+          exception.message shouldContain "Failed to create output directory"
+        } finally {
+          blockingFile.delete()
+        }
       }
 
       test("should handle exceptions thrown during page content rendering") {

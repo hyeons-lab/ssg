@@ -16,6 +16,8 @@
 package com.hyeonslab.ssg.core.dsl
 
 import com.hyeonslab.ssg.core.ExternalStylesheet
+import com.hyeonslab.ssg.page.Logo
+import com.hyeonslab.ssg.page.NavMenuSettings
 import com.hyeonslab.ssg.page.Page
 import com.hyeonslab.ssg.page.PageSettings
 import io.kotest.assertions.throwables.shouldThrow
@@ -262,6 +264,49 @@ class SiteDslTest :
             }
           }
         exception.message shouldContain "logo must be specified"
+      }
+
+      test("should use default colors when not specified in navigation") {
+        val site = site {
+          outputPath = "build/test"
+          title = "Test"
+          pages = listOf(homePage)
+
+          navigation { logo("logo.png", width = 100, height = 50) }
+        }
+
+        site.navigation?.backgroundColor shouldBe "bg-white"
+        site.navigation?.navSelectedColor shouldBe "text-blue-600"
+        site.navigation?.navDefaultColor shouldBe "text-gray-700"
+      }
+
+      test("should allow setting navigation directly on site builder") {
+        val nav =
+          NavMenuSettings(
+            backgroundColor = "bg-gray-100",
+            navSelectedColor = "text-red-500",
+            navDefaultColor = "text-black",
+            isSticky = false,
+            logo = Logo("logo.png", 50, 50),
+            blurNavBackground = false,
+          )
+        val site = site {
+          outputPath = "build/test"
+          title = "Test"
+          pages = listOf(homePage)
+          navigation = nav
+        }
+        site.navigation shouldBe nav
+      }
+
+      test("should create navigation with pre-existing Logo instance") {
+        val site = site {
+          outputPath = "build/test"
+          title = "Test"
+          pages = listOf(homePage)
+          navigation { logo(Logo("logo.png", width = 100, height = 50)) }
+        }
+        site.navigation?.logo?.imageUrl shouldBe "logo.png"
       }
     }
 
