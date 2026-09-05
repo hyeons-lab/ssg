@@ -59,9 +59,9 @@ import com.hyeonslab.ssg.page.NavMenuSettings
  */
 @SsgDsl
 class NavigationBuilder {
-  var backgroundColor: String? = null
-  var navSelectedColor: String? = null
-  var navDefaultColor: String? = null
+  var backgroundColor: String = "bg-white"
+  var navSelectedColor: String = "text-blue-600"
+  var navDefaultColor: String = "text-gray-700"
   var isSticky: Boolean = false
   var instagram: String? = null
   var email: String? = null
@@ -70,6 +70,11 @@ class NavigationBuilder {
   var horizontalMargin: String = "16"
 
   private var logoConfig: Logo? = null
+
+  /** Set a pre-configured Logo instance directly. */
+  fun logo(logo: Logo) {
+    logoConfig = logo
+  }
 
   /**
    * Configure the logo with a simpler syntax.
@@ -101,15 +106,12 @@ class NavigationBuilder {
 
   /** Build the NavMenuSettings instance from the configured values. */
   fun build(): NavMenuSettings {
-    requireNotNull(backgroundColor) { "navigation.backgroundColor must be specified" }
-    requireNotNull(navSelectedColor) { "navigation.navSelectedColor must be specified" }
-    requireNotNull(navDefaultColor) { "navigation.navDefaultColor must be specified" }
     requireNotNull(logoConfig) { "navigation.logo must be specified" }
 
     return NavMenuSettings(
-      backgroundColor = backgroundColor!!,
-      navSelectedColor = navSelectedColor!!,
-      navDefaultColor = navDefaultColor!!,
+      backgroundColor = backgroundColor,
+      navSelectedColor = navSelectedColor,
+      navDefaultColor = navDefaultColor,
       isSticky = isSticky,
       instagram = instagram,
       email = email,

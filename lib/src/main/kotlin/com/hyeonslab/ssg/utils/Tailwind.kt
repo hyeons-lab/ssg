@@ -15,6 +15,8 @@
  */
 package com.hyeonslab.ssg.utils
 
+import kotlinx.serialization.Serializable
+
 /**
  * Type-safe Tailwind CSS utility classes organized by category.
  *
@@ -76,7 +78,7 @@ sealed interface Tailwind {
     }
   }
 
-  sealed interface Colors {
+  sealed interface Colors : Tailwind {
     val color: String
 
     sealed interface Background : Colors {
@@ -97,14 +99,23 @@ sealed interface Tailwind {
       }
     }
 
+    @Serializable
     sealed interface Text : Colors {
-      data class Custom(override val color: String) : Text
+      @Serializable
+      data class Custom(override val color: String) : Text {
+        init {
+          validateCssClasses(color, "Custom text color")
+        }
+      }
 
+      @Serializable
       sealed interface Neutral : Text {
+        @Serializable
         data object `600` : Neutral {
           override val color: String = "text-neutral-600"
         }
 
+        @Serializable
         data object `900` : Neutral {
           override val color: String = "text-neutral-900"
         }

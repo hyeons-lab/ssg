@@ -25,8 +25,10 @@ import com.hyeonslab.ssg.utils.validateCssClasses
 import com.hyeonslab.ssg.utils.validateRelativePath
 import com.hyeonslab.ssg.utils.validateUrlChars
 import java.io.File
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.time.LocalDate
 import kotlinx.html.body
 import kotlinx.html.div
@@ -112,6 +114,9 @@ data class Site(
   val ogSiteName: String? = null,
 ) {
   init {
+    validateRelativePath(outputPath, "outputPath")
+    require(title.isNotBlank()) { "title cannot be blank" }
+
     // Validate CSS class strings to prevent HTML attribute injection
     validateCssClasses(backgroundColor, "backgroundColor")
     validateCssClasses(htmlClasses, "htmlClasses")
@@ -120,9 +125,10 @@ data class Site(
 
     // Page output filenames must be unique (otherwise generated files silently overwrite each
     // other) and must stay inside the output directory.
-    require(pages.map { it.outputFilename }.toSet().size == pages.size) {
-      val duplicates =
-        pages.groupingBy { it.outputFilename }.eachCount().filterValues { it > 1 }.keys
+    val normalizedNames =
+      pages.map { Path.of(it.outputFilename.replace('\\', '/')).normalize().toString() }
+    require(normalizedNames.toSet().size == pages.size) {
+      val duplicates = normalizedNames.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
       "Duplicate page outputFilename(s): ${duplicates.joinToString()}\n" +
         "Each page must have a distinct outputFilename or generated files will overwrite each other."
     }
@@ -139,6 +145,7 @@ data class Site(
     }
 
     baseUrl?.let { url ->
+      require(url.isNotBlank()) { "baseUrl cannot be blank" }
       require(!url.endsWith("/")) {
         "baseUrl must not have a trailing slash: '$url'\n" +
           "Valid example: 'https://example.com' (not 'https://example.com/')"
@@ -146,6 +153,14 @@ data class Site(
       validateUrlChars(url, "baseUrl")
     }
     defaultOgImage?.let { validateUrlChars(it, "defaultOgImage") }
+
+    resources.localStylesheets.forEach { cssPath ->
+      validateRelativePath(cssPath, "localStylesheet '$cssPath'")
+      validateUrlChars(cssPath, "localStylesheet '$cssPath'")
+    }
+    resources.externalStylesheets.forEach { stylesheet ->
+      validateUrlChars(stylesheet.href, "externalStylesheet href '${stylesheet.href}'")
+    }
   }
 
   /**
@@ -244,6 +259,7 @@ data class Site(
     pages.forEach { page ->
       val result = runCatching {
         val generatedHtml = buildString {
+          appendLine("<!DOCTYPE html>")
           appendHTML().html {
             attributes["lang"] = this@Site.lang
             if (htmlClasses.isNotEmpty()) {
@@ -302,7 +318,8 @@ data class Site(
                   attributes["property"] = "og:url"
                   content = canonicalUrl
                 }
-                (page.ogImage ?: defaultOgImage)?.let { img ->
+                val cardImage = page.ogImage ?: defaultOgImage
+                cardImage?.let { img ->
                   meta {
                     attributes["property"] = "og:image"
                     content = img
@@ -310,17 +327,19 @@ data class Site(
                 }
                 meta {
                   name = "twitter:card"
-                  content = "summary_large_image"
+                  content = if (cardImage != null) "summary_large_image" else "summary"
                 }
               }
               // JSON-LD structured data. Escape angle brackets as their JSON unicode escapes
               // (< / >) so the content cannot terminate the <script> tag or trigger the
               // script-data escaped states (e.g. via "<!--<script>").
-              page.structuredData?.let { json ->
-                script(type = "application/ld+json") {
-                  unsafe { +json.replace("<", "\\u003c").replace(">", "\\u003e") }
+              page.structuredData
+                ?.takeIf { it.isNotBlank() }
+                ?.let { json ->
+                  script(type = "application/ld+json") {
+                    unsafe { +json.replace("<", "\\u003c").replace(">", "\\u003e") }
+                  }
                 }
-              }
               // Include local stylesheets
               resources.localStylesheets.forEach { cssPath ->
                 link {
@@ -351,7 +370,7 @@ data class Site(
             }
           }
         }
-        File("$outputPath/${page.outputFilename}").writeText(generatedHtml)
+        writeFileAtomically(File(outputPath, page.outputFilename), generatedHtml)
       }
       results.add(page.outputFilename to result)
     }
@@ -392,7 +411,7 @@ data class Site(
       }
       appendLine("</urlset>")
     }
-    File("$outputPath/sitemap.xml").writeText(xml)
+    writeFileAtomically(File(outputPath, "sitemap.xml"), xml)
   }
 
   /**
@@ -412,12 +431,38 @@ data class Site(
       appendLine("Disallow:")
       appendLine("Sitemap: $base/sitemap.xml")
     }
-    File("$outputPath/robots.txt").writeText(txt)
+    writeFileAtomically(File(outputPath, "robots.txt"), txt)
   }
 
   /** Creates the output directory (and parents) if needed. Thread-safe and idempotent. */
   private fun ensureOutputDir() {
-    Files.createDirectories(Paths.get(outputPath))
+    Files.createDirectories(Path.of(outputPath))
+  }
+
+  /**
+   * Writes content to a file atomically by writing to a temporary file in the target directory and
+   * moving it into place. Ensures parent directories exist.
+   */
+  private fun writeFileAtomically(file: File, content: String) {
+    val parentDir = file.parentFile ?: File(outputPath)
+    Files.createDirectories(parentDir.toPath())
+    val tempFile = File.createTempFile("ssg-", ".tmp", parentDir)
+    try {
+      tempFile.writeText(content)
+      try {
+        Files.move(
+          tempFile.toPath(),
+          file.toPath(),
+          StandardCopyOption.ATOMIC_MOVE,
+          StandardCopyOption.REPLACE_EXISTING,
+        )
+      } catch (_: AtomicMoveNotSupportedException) {
+        Files.move(tempFile.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+      }
+    } catch (e: Throwable) {
+      tempFile.delete()
+      throw e
+    }
   }
 
   /**

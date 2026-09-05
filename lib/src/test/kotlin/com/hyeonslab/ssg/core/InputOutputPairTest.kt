@@ -2,6 +2,7 @@ package com.hyeonslab.ssg.core
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 
 class InputOutputPairTest :
@@ -68,5 +69,32 @@ class InputOutputPairTest :
       // Should throw resource not found, NOT validation error
       val exception = shouldThrow<IllegalStateException> { pair.copyResource() }
       exception.message shouldContain "Resource not found in classpath"
+    }
+
+    "should copy existing classpath resource to output file" {
+      val outputDir = "build/test-copy-success"
+      val pair =
+        InputOutputPair(
+          inputFilename = "fixtures/test.txt",
+          outputPath = outputDir,
+          outputFilename = "copied.txt",
+        )
+      pair.copyResource()
+      val destination = java.io.File("$outputDir/copied.txt")
+      destination.exists() shouldBe true
+      destination.readText() shouldBe "hello static site generator\n"
+      java.io.File(outputDir).deleteRecursively()
+    }
+
+    "should reject blank inputFilename or outputPath" {
+      val pair = InputOutputPair(inputFilename = "", outputPath = "build/test")
+      val exception = shouldThrow<IllegalArgumentException> { pair.copyResource() }
+      exception.message shouldContain "cannot be blank"
+    }
+
+    "should reject root-relative paths with leading slash or backslash" {
+      val pairSlash = InputOutputPair(inputFilename = "\\etc\\passwd", outputPath = "build/test")
+      val exceptionSlash = shouldThrow<IllegalArgumentException> { pairSlash.copyResource() }
+      exceptionSlash.message shouldContain "cannot be an absolute path"
     }
   })

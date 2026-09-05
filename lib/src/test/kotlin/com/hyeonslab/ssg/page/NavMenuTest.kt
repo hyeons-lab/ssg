@@ -142,7 +142,7 @@ class NavMenuTest :
           }
         }
 
-        html shouldContain "sticky"
+        html shouldContain "sticky top-0"
       }
 
       test("should not apply sticky class when isSticky is false") {
@@ -243,6 +243,8 @@ class NavMenuTest :
 
         html shouldContain "https://www.instagram.com/testuser"
         html shouldContain "fa-instagram"
+        html shouldContain "aria-label=\"Instagram\""
+        html shouldContain "rel=\"noopener noreferrer\""
       }
 
       test("should not include Instagram link when instagram is null") {
@@ -295,6 +297,38 @@ class NavMenuTest :
 
         html shouldContain "mailto:test@example.com"
         html shouldContain "fa-envelope"
+        html shouldContain "aria-label=\"Email\""
+      }
+
+      test("should compute relative links with ../ for nested selected page") {
+        val nestedPage =
+          object : Page {
+            override val title = "Nested"
+            override val outputFilename = "docs/nested/guide.html"
+            override val content = { _: PageSettings, _: kotlinx.html.FlowContent -> }
+          }
+        val html = buildString {
+          appendHTML().html {
+            body {
+              navMenu(
+                selected = nestedPage,
+                pages = listOf(homePage, nestedPage),
+                navMenuSettings =
+                  NavMenuSettings(
+                    backgroundColor = "bg-white",
+                    navSelectedColor = "text-blue-600",
+                    navDefaultColor = "text-gray-700",
+                    isSticky = false,
+                    logo = Logo(imageUrl = "logo.png", width = 50, height = 50),
+                    blurNavBackground = false,
+                  ),
+              )
+            }
+          }
+        }
+
+        html shouldContain "href=\"../../index.html\""
+        html shouldContain "href=\"../../docs/nested/guide.html\""
       }
 
       test("should not include email link when email is null") {

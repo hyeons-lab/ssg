@@ -77,6 +77,11 @@ data class ExternalStylesheet(
      * @see <a href="https://tailwindcss.com/docs/installation/play-cdn">Tailwind Play CDN
      *   Documentation</a>
      */
+    @Deprecated(
+      message =
+        "Tailwind Play CDN is a client-side JavaScript engine, not a CSS stylesheet. Browsers reject it inside <link rel=\"stylesheet\"> due to strict MIME type checking. Use compiled CSS or include the script tag directly.",
+      level = DeprecationLevel.WARNING,
+    )
     val TAILWIND_CSS_3_4_17 = ExternalStylesheet(href = "https://cdn.tailwindcss.com/3.4.17")
   }
 }

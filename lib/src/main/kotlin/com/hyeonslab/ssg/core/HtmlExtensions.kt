@@ -118,8 +118,8 @@ fun CommonAttributeGroupFacade.adjustSelected(
   unselectedColor: String,
 ) {
   if (selected == selection) {
-    classes += " $selectedColor"
+    classes += selectedColor
   } else {
-    classes += " $unselectedColor"
+    classes += unselectedColor
   }
 }
