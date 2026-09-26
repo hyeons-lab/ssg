@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **BREAKING:** Renamed `ExternalStylesheet.TAILWIND_CSS_3_4_17` to `TAILWIND_CSS_3_4_19` (Tailwind Play CDN updated to latest v3 LTS 3.4.19)
+- Updated build dependencies: Kotlin 2.4.20, Gradle 9.8.0, Kotest 6.2.5, Dokka 2.2.0, kotlinx.serialization 1.11.0, kotlinx.io 0.9.1, vanniktech publish plugin 0.37.0, ktfmt 0.27.0
+- Updated CI actions: checkout v7, setup-java v6, setup-gradle v6, upload-artifact v7
+
 ## [0.1.0] - 2026-02-08
 
 ### Added

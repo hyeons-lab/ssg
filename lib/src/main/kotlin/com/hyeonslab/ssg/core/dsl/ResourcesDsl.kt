@@ -47,7 +47,7 @@ import com.hyeonslab.ssg.core.ResourceConfig
  *     localStylesheets("css/tailwind.css", "css/theme.css", "css/custom.css")
  *     externalStylesheets(
  *         ExternalStylesheet.FONT_AWESOME_6_7_2,
- *         ExternalStylesheet.TAILWIND_CSS_3_4_17
+ *         ExternalStylesheet.TAILWIND_CSS_3_4_19
  *     )
  * }
  * ```
@@ -136,7 +136,7 @@ class ResourcesBuilder {
    * Example:
    * ```kotlin
    * resources {
-   *     externalStylesheet(ExternalStylesheet.TAILWIND_CSS_3_4_17)
+   *     externalStylesheet(ExternalStylesheet.TAILWIND_CSS_3_4_19)
    *     noLocalStylesheets()
    * }
    * ```
