@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optimized `Encoding.escapeXml` with zero-allocation fast path and single-pass builder.
 - Streamlined `InputOutputPair` copying with direct `Files.copy`.
 - Broadened CI branch trigger patterns to support conventional branch names.
-- Updated build dependencies: Kotlin 2.4.20, Gradle 9.8.0, Kotest 6.2.5, Dokka 2.2.0, kotlinx.serialization 1.11.0, vanniktech publish plugin 0.37.0, ktfmt 0.27.0
+- Updated build dependencies: Kotlin 2.4.20, Gradle 9.8.0, Kotest 6.2.5, Dokka 2.2.0, kotlinx.serialization 1.11.0, Gradle Tailwind plugin 0.3.1, vanniktech publish plugin 0.37.0, ktfmt 0.27.0
 - Updated CI actions: checkout v7, setup-java v6, setup-gradle v6, upload-artifact v7
 - `localStylesheets` entries are validated as URL hrefs (quotes, angle brackets, and newlines rejected); root-relative and absolute URLs are accepted and emitted verbatim.
 - Removed the now-unused kotlinx.io dependency (resource copying uses `Files.copy`).

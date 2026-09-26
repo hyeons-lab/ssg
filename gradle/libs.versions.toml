@@ -8,7 +8,7 @@ serialization = "1.11.0"
 kotlinxHtml = "0.12.0"
 kotest = "6.2.5"
 dokka = "2.2.0"
-tailwind = "0.3.1-SNAPSHOT"
+tailwind = "0.3.1"
 vanniktechMavenPublish = "0.37.0"
 ktfmt = "0.27.0"
 
