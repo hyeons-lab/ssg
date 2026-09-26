@@ -125,8 +125,9 @@ data class Site(
 
     // Page output filenames must be unique (otherwise generated files silently overwrite each
     // other) and must stay inside the output directory.
-    val normalizedNames =
-      pages.map { Path.of(it.outputFilename.replace('\\', '/')).normalize().toString() }
+    val normalizedNames = pages.map {
+      Path.of(it.outputFilename.replace('\\', '/')).normalize().toString()
+    }
     require(normalizedNames.toSet().size == pages.size) {
       val duplicates = normalizedNames.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
       "Duplicate page outputFilename(s): ${duplicates.joinToString()}\n" +

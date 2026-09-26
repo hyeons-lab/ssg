@@ -73,17 +73,16 @@ private fun relativePageHref(fromPage: Page, targetFilename: String): String {
 }
 
 fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSettings) {
-  val navClasses =
-    buildList {
-        if (navMenuSettings.blurNavBackground) add("backdrop-blur-md")
-        if (navMenuSettings.isSticky) add("sticky top-0")
-        add("z-[255]")
-        add(navMenuSettings.fontFamily)
-        add("flex w-full py-4")
-        add("px-${navMenuSettings.horizontalMargin}")
-        add(navMenuSettings.backgroundColor)
-      }
-      .joinToString(" ")
+  val navClasses = buildList {
+    if (navMenuSettings.blurNavBackground) add("backdrop-blur-md")
+    if (navMenuSettings.isSticky) add("sticky top-0")
+    add("z-[255]")
+    add(navMenuSettings.fontFamily)
+    add("flex w-full py-4")
+    add("px-${navMenuSettings.horizontalMargin}")
+    add(navMenuSettings.backgroundColor)
+  }
+    .joinToString(" ")
 
   val homeFilename = pages.firstOrNull()?.outputFilename ?: "index.html"
 
