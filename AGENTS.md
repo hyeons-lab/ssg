@@ -405,7 +405,6 @@ From recent code review (see CODE_REVIEW.md - local file only):
 
 **Core:**
 - `kotlinx.html:0.12.0` - Type-safe HTML generation
-- `kotlinx.io:0.9.1` - Resource copying
 - `kotlinx.serialization:1.11.0` - Future feature (not currently used)
 
 **Gradle Plugins:**

@@ -17,7 +17,10 @@ package com.hyeonslab.ssg.page
 
 import com.hyeonslab.ssg.core.adjustSelected
 import com.hyeonslab.ssg.utils.Tailwind
+import com.hyeonslab.ssg.utils.depthPrefix
 import com.hyeonslab.ssg.utils.encodeUrlPath
+import com.hyeonslab.ssg.utils.normalizedPathString
+import com.hyeonslab.ssg.utils.relativeAssetHref
 import kotlinx.html.BODY
 import kotlinx.html.a
 import kotlinx.html.div
@@ -65,11 +68,9 @@ import kotlinx.html.style
  * ```
  */
 /** Computes a relative href from the currently active page to a target page filename. */
-private fun relativePageHref(fromPage: Page, targetFilename: String): String {
-  val normalizedFrom = fromPage.outputFilename.replace('\\', '/')
-  val depth = normalizedFrom.count { it == '/' }
-  val prefix = if (depth == 0) "./" else "../".repeat(depth)
-  return "$prefix${encodeUrlPath(targetFilename)}"
+private fun relativePageHref(selectedPrefix: String, targetFilename: String): String {
+  val normalized = normalizedPathString(targetFilename)
+  return "$selectedPrefix${encodeUrlPath(normalized)}"
 }
 
 fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSettings) {
@@ -85,12 +86,17 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
     .joinToString(" ")
 
   val homeFilename = pages.firstOrNull()?.outputFilename ?: "index.html"
+  // Computed once per page: every link below shares the selected page's depth.
+  val selectedPrefix = depthPrefix(selected.outputFilename)
 
   nav(classes = navClasses) {
-    a(href = relativePageHref(selected, homeFilename)) {
+    a(href = relativePageHref(selectedPrefix, homeFilename)) {
       div {
         style = "height: ${navMenuSettings.logo.height}px; width: ${navMenuSettings.logo.width}px;"
-        img(src = navMenuSettings.logo.imageUrl, alt = navMenuSettings.logo.altText) {
+        img(
+          src = relativeAssetHref(selected.outputFilename, navMenuSettings.logo.imageUrl),
+          alt = navMenuSettings.logo.altText,
+        ) {
           style =
             "height: ${navMenuSettings.logo.height}px; width: ${navMenuSettings.logo.width}px;"
         }
@@ -109,7 +115,7 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
         )
         a(
           classes = "uppercase mx-1 md:mx-2 text-nowrap",
-          href = relativePageHref(selected, page.outputFilename),
+          href = relativePageHref(selectedPrefix, page.outputFilename),
         ) {
           +page.title
         }

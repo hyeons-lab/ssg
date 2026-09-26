@@ -31,7 +31,6 @@ This project provides a programmatic approach to building static websites using 
 - **Kotlin**: 2.4.20
 - **kotlinx.html**: 0.12.0
 - **kotlinx.serialization**: 1.11.0
-- **kotlinx.io**: 0.9.1
 - **Gradle**: 9.0+
 - **Java**: 21 (JVM toolchain)
 

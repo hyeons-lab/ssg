@@ -24,7 +24,9 @@ import kotlinx.serialization.Serializable
  * external CDN stylesheets.
  *
  * @property staticFiles List of static files to copy from classpath to output directory
- * @property localStylesheets List of local CSS files (relative paths from output directory)
+ * @property localStylesheets List of local CSS files as URL hrefs. Relative paths (from the output
+ *   directory) are automatically depth-prefixed for nested pages; root-relative and absolute URLs
+ *   pass through untouched.
  * @property externalStylesheets List of external CDN stylesheets with SRI integrity
  */
 @Serializable

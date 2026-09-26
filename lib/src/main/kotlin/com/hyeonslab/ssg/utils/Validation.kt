@@ -34,6 +34,9 @@ internal val CSS_CLASS_REGEX = Regex("^[a-zA-Z0-9\\s\\-_:/\\[\\].%#!@*,()&]+$")
 /** A single Tailwind spacing token: no whitespace, so it cannot inject additional classes. */
 internal val SPACING_UNIT_REGEX = Regex("^[a-zA-Z0-9._/\\[\\]-]+$")
 
+/** A Windows drive specifier prefix (`C:`), rejected so validated paths stay relative. */
+internal val DRIVE_SPECIFIER_REGEX = Regex("^[a-zA-Z]:")
+
 /**
  * Validates a Tailwind class string. Empty strings are allowed (they render no classes); any
  * non-empty value must contain only safe class characters.
@@ -67,6 +70,7 @@ internal fun validateSpacingUnit(value: String, fieldName: String) {
  */
 internal fun validateUrlChars(url: String, fieldName: String) {
   require(url.isNotBlank()) { "$fieldName cannot be blank" }
+  require(url == url.trim()) { "$fieldName must not have leading or trailing whitespace: '$url'" }
   require(!url.contains("\"") && !url.contains("'") && !url.contains("<") && !url.contains(">")) {
     "$fieldName contains invalid characters: '$url'\n" +
       "Invalid characters: quotes (\", '), angle brackets (<, >)\n" +
@@ -86,7 +90,7 @@ internal fun validateRelativePath(path: String, name: String) {
   require(path.isNotBlank()) { "$name cannot be blank" }
   val unified = path.replace('\\', '/')
   require(!unified.startsWith("/")) { "$name cannot be an absolute path: $path" }
-  require(!Regex("^[a-zA-Z]:").containsMatchIn(unified)) {
+  require(!DRIVE_SPECIFIER_REGEX.containsMatchIn(unified)) {
     "$name cannot contain a drive specifier: $path"
   }
   val normalized = Path.of(unified).normalize()

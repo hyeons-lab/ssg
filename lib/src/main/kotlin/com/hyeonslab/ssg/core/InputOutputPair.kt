@@ -18,7 +18,6 @@ package com.hyeonslab.ssg.core
 import com.hyeonslab.ssg.utils.validateRelativePath
 import java.io.File
 import java.io.InputStream
-import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import kotlin.use
@@ -113,9 +112,11 @@ fun InputOutputPair.copyResource() {
   validateRelativePath(outputPath, "Output path")
   outputFilename?.let { validateRelativePath(it, "Output filename") }
 
+  // unify separators so output lands in nested directories on all platforms
+  val resolvedOutputPath = outputPath.replace('\\', '/')
   // use the outputFilename relative to the outputPath, otherwise use the inputFilename
-  val relativeTarget = outputFilename ?: inputFilename
-  val outputFile = File(outputPath, relativeTarget)
+  val relativeTarget = (outputFilename ?: inputFilename).replace('\\', '/')
+  val outputFile = File(resolvedOutputPath, relativeTarget)
 
   // Resolve the resource first; only touch the filesystem once we know it exists, so a missing
   // resource never leaves empty directories behind.
@@ -131,30 +132,8 @@ fun InputOutputPair.copyResource() {
       )
 
   resource.use { input ->
-    // Create parent directories (thread-safe, creates all parents, idempotent)
-    val parent = outputFile.parentFile
-    parent?.let { Files.createDirectories(it.toPath()) }
-
-    // Write to a temp file in the destination directory, then move it into place. This way a
-    // failure mid-copy (e.g. out of disk) cannot truncate or corrupt an existing output file.
-    val tempFile = File.createTempFile("ssg-", ".tmp", parent ?: File("."))
-    try {
+    outputFile.replaceAtomically { tempFile ->
       Files.copy(input, tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
-      // Prefer an atomic move so the output file is never observed half-written. Not all
-      // filesystems support ATOMIC_MOVE, so fall back to a plain replacing move when they don't.
-      try {
-        Files.move(
-          tempFile.toPath(),
-          outputFile.toPath(),
-          StandardCopyOption.ATOMIC_MOVE,
-          StandardCopyOption.REPLACE_EXISTING,
-        )
-      } catch (_: AtomicMoveNotSupportedException) {
-        Files.move(tempFile.toPath(), outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
-      }
-    } catch (e: Throwable) {
-      tempFile.delete()
-      throw e
     }
   }
 }

@@ -78,7 +78,7 @@ sealed interface Tailwind {
     }
   }
 
-  sealed interface Colors : Tailwind {
+  sealed interface Colors {
     val color: String
 
     sealed interface Background : Colors {

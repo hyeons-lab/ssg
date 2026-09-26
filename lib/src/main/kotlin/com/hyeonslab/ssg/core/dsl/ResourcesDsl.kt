@@ -47,7 +47,7 @@ import com.hyeonslab.ssg.core.ResourceConfig
  *     localStylesheets("css/tailwind.css", "css/theme.css", "css/custom.css")
  *     externalStylesheets(
  *         ExternalStylesheet.FONT_AWESOME_6_7_2,
- *         ExternalStylesheet.TAILWIND_CSS_3_4_19
+ *         ExternalStylesheet(href = "https://cdn.example.com/style.css")
  *     )
  * }
  * ```
@@ -99,7 +99,9 @@ class ResourcesBuilder {
   }
 
   /**
-   * Add a local stylesheet path (relative to output directory).
+   * Add a local stylesheet href. Relative paths resolve from the output directory and are
+   * depth-prefixed automatically for nested pages; root-relative and absolute URLs pass through
+   * untouched.
    *
    * Example:
    * ```kotlin
@@ -136,7 +138,7 @@ class ResourcesBuilder {
    * Example:
    * ```kotlin
    * resources {
-   *     externalStylesheet(ExternalStylesheet.TAILWIND_CSS_3_4_19)
+   *     externalStylesheet(ExternalStylesheet.FONT_AWESOME_6_7_2)
    *     noLocalStylesheets()
    * }
    * ```

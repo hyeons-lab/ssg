@@ -42,6 +42,11 @@ Fix all issues surfaced during the full-codebase code review audit:
 - 2026-09-05T08:31-07:00 `.github/workflows/build.yml`: Broaden branch triggers and drop PR write permissions.
 - 2026-09-05T08:31-07:00 `CHANGELOG.md`: Document unreleased features and fixes.
 - 2026-09-05T08:31-07:00 `lib/src/test/kotlin/`: Add test coverage for resource copying, doctype emission, nested pages, sticky navigation, arbitrary Tailwind classes, and serialization.
+- 2026-09-26T08:56-07:00 `lib/src/main/kotlin/com/hyeonslab/ssg/core/AtomicWrite.kt`: Catch `UnsupportedOperationException` for filesystem move fallback and move `deleteOnExit` cleanup registration to `onFailure`.
+- 2026-09-26T08:56-07:00 `lib/src/main/kotlin/com/hyeonslab/ssg/core/Site.kt`: Validate normalized page output filenames are non-empty, chain causal and suppressed exceptions in `copyResources` and `generateFiles`, and inline `ensureOutputDir` into `ensureOutputDirFor`.
+- 2026-09-26T08:56-07:00 `lib/src/main/kotlin/com/hyeonslab/ssg/page/NavMenu.kt`: Normalize target page filenames in `relativePageHref`.
+- 2026-09-26T08:56-07:00 `lib/src/main/kotlin/com/hyeonslab/ssg/utils/Encoding.kt`: Clean up redundant pre-checks and unify backslashes in `relativeAssetHref`.
+- 2026-09-26T08:56-07:00 `lib/src/test/kotlin/`: Expand test coverage for atomic write parent directory creation, cause/suppressed exception chains in `SiteTest`, normalized navigation hrefs in `NavMenuTest`, and URL/path encoding helpers in `EncodingTest`.
 
 ## Commits
 
