@@ -11,6 +11,6 @@ kotlin {
 
 dependencies {
     // Add a dependency on the Kotlin Gradle plugin, so that convention plugins can apply it.
-    // Gradle 9.0.0 ships with Kotlin 2.2.0 and fully supports Kotlin 2.3.10
+    // Gradle 9.8.0 ships with Kotlin 2.4.10 and fully supports Kotlin 2.4.20
     implementation(libs.kotlinGradlePlugin)
 }

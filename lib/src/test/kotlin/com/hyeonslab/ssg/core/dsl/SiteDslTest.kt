@@ -386,7 +386,7 @@ class SiteDslTest :
           pages = listOf(homePage)
 
           resources {
-            externalStylesheet(ExternalStylesheet.TAILWIND_CSS_3_4_17)
+            externalStylesheet(ExternalStylesheet.TAILWIND_CSS_3_4_19)
             noLocalStylesheets()
           }
         }

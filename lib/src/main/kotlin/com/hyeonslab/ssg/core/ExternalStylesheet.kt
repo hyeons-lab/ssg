@@ -58,7 +58,7 @@ data class ExternalStylesheet(
       )
 
     /**
-     * Tailwind CSS 3.4.17 Play CDN configuration.
+     * Tailwind CSS 3.4.19 Play CDN configuration.
      *
      * Pre-configured CDN link for Tailwind CSS Play CDN. This is designed for development and
      * prototyping purposes only. The Play CDN includes the full Tailwind CSS framework and
@@ -70,7 +70,7 @@ data class ExternalStylesheet(
      * Usage (development only):
      * ```kotlin
      * resources {
-     *     externalStylesheet(ExternalStylesheet.TAILWIND_CSS_3_4_17)
+     *     externalStylesheet(ExternalStylesheet.TAILWIND_CSS_3_4_19)
      * }
      * ```
      *
@@ -82,6 +82,6 @@ data class ExternalStylesheet(
         "Tailwind Play CDN is a client-side JavaScript engine, not a CSS stylesheet. Browsers reject it inside <link rel=\"stylesheet\"> due to strict MIME type checking. Use compiled CSS or include the script tag directly.",
       level = DeprecationLevel.WARNING,
     )
-    val TAILWIND_CSS_3_4_17 = ExternalStylesheet(href = "https://cdn.tailwindcss.com/3.4.17")
+    val TAILWIND_CSS_3_4_19 = ExternalStylesheet(href = "https://cdn.tailwindcss.com/3.4.19")
   }
 }
