@@ -48,8 +48,10 @@ Fix all issues surfaced during the full-codebase code review audit:
 - 2026-09-26T08:56-07:00 `lib/src/main/kotlin/com/hyeonslab/ssg/utils/Encoding.kt`: Clean up redundant pre-checks and unify backslashes in `relativeAssetHref`.
 - 2026-09-26T08:56-07:00 `lib/src/test/kotlin/`: Expand test coverage for atomic write parent directory creation, cause/suppressed exception chains in `SiteTest`, normalized navigation hrefs in `NavMenuTest`, and URL/path encoding helpers in `EncodingTest`.
 - 2026-09-26T13:16-07:00 `gradle/libs.versions.toml`, `vendor/gradle-tailwind`, `CHANGELOG.md`: Update Gradle Tailwind plugin to release 0.3.1 and advance submodule commit.
+- 2026-09-26T19:02-07:00 `.github/workflows/build.yml`, `.github/BRANCH_PROTECTION.md`, `lib/src/main/kotlin/com/hyeonslab/ssg/page/NavMenu.kt`, `lib/src/main/kotlin/com/hyeonslab/ssg/utils/Validation.kt`, `lib/src/test/kotlin/com/hyeonslab/ssg/core/SiteTest.kt`: Add feature/** branch trigger to CI workflow and docs, move relativePageHref below navMenu so KDoc attaches to the public function, and list all supported Tailwind characters in validateCssClasses error message.
 
 ## Commits
 
 - 14c5012: fix: resolve full-codebase audit findings
-- HEAD: chore(deps): bump gradle-tailwind to 0.3.1
+- 6d33be6: chore(deps): bump gradle-tailwind to 0.3.1
+- HEAD: fix: address pull request review comments

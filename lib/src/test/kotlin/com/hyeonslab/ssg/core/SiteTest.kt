@@ -290,6 +290,8 @@ class SiteTest :
               .copy(backgroundColor = "bg-white\" onclick=\"alert('XSS')\" class=\"")
           }
         exception.message shouldContain "backgroundColor contains invalid characters"
+        exception.message shouldContain "hashes, exclamation marks, at signs"
+        exception.message shouldContain "bg-[#1da1f2]"
       }
 
       test("should reject CSS classes with angle brackets") {

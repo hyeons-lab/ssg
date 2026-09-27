@@ -67,12 +67,6 @@ import kotlinx.html.style
  * }
  * ```
  */
-/** Computes a relative href from the currently active page to a target page filename. */
-private fun relativePageHref(selectedPrefix: String, targetFilename: String): String {
-  val normalized = normalizedPathString(targetFilename)
-  return "$selectedPrefix${encodeUrlPath(normalized)}"
-}
-
 fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSettings) {
   val navClasses = buildList {
     if (navMenuSettings.blurNavBackground) add("backdrop-blur-md")
@@ -150,4 +144,10 @@ fun BODY.navMenu(selected: Page, pages: List<Page>, navMenuSettings: NavMenuSett
       }
     }
   }
+}
+
+/** Computes a relative href from the currently active page to a target page filename. */
+private fun relativePageHref(selectedPrefix: String, targetFilename: String): String {
+  val normalized = normalizedPathString(targetFilename)
+  return "$selectedPrefix${encodeUrlPath(normalized)}"
 }

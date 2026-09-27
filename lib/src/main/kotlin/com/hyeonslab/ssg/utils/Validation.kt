@@ -45,8 +45,8 @@ internal fun validateCssClasses(classes: String, fieldName: String) {
   if (classes.isEmpty()) return
   require(classes.matches(CSS_CLASS_REGEX)) {
     "$fieldName contains invalid characters: '$classes'\n" +
-      "Allowed characters: letters, numbers, spaces, hyphens, underscores, colons, slashes, brackets, dots, percent signs\n" +
-      "Valid examples: 'bg-white', 'text-blue-600 hover:text-blue-700', 'w-1/2', 'z-[255]', 'bg-white/90'\n" +
+      "Allowed characters: letters, numbers, spaces, hyphens, underscores, colons, slashes, brackets, dots, percent signs, hashes, exclamation marks, at signs, asterisks, commas, parentheses, ampersands\n" +
+      "Valid examples: 'bg-white', 'text-blue-600 hover:text-blue-700', 'w-1/2', 'z-[255]', 'bg-white/90', 'bg-[#1da1f2]', '!flex', '@container'\n" +
       "This validation prevents HTML attribute injection attacks."
   }
 }
