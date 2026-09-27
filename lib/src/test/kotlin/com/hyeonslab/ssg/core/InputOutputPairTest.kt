@@ -2,6 +2,7 @@ package com.hyeonslab.ssg.core
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 
 class InputOutputPairTest :
@@ -68,5 +69,99 @@ class InputOutputPairTest :
       // Should throw resource not found, NOT validation error
       val exception = shouldThrow<IllegalStateException> { pair.copyResource() }
       exception.message shouldContain "Resource not found in classpath"
+    }
+
+    "should copy existing classpath resource to output file" {
+      val outputDir = "build/test-copy-success"
+      try {
+        val pair =
+          InputOutputPair(
+            inputFilename = "fixtures/test.txt",
+            outputPath = outputDir,
+            outputFilename = "copied.txt",
+          )
+        pair.copyResource()
+        val destination = java.io.File("$outputDir/copied.txt")
+        destination.exists() shouldBe true
+        destination.readText() shouldBe "hello static site generator\n"
+      } finally {
+        java.io.File(outputDir).deleteRecursively()
+      }
+    }
+
+    "should reject blank inputFilename or outputPath" {
+      val pair = InputOutputPair(inputFilename = "", outputPath = "build/test")
+      val exception = shouldThrow<IllegalArgumentException> { pair.copyResource() }
+      exception.message shouldContain "cannot be blank"
+
+      val pairOut = InputOutputPair(inputFilename = "fixtures/test.txt", outputPath = "")
+      val exceptionOut = shouldThrow<IllegalArgumentException> { pairOut.copyResource() }
+      exceptionOut.message shouldContain "cannot be blank"
+    }
+
+    "should reject root-relative paths with leading slash or backslash" {
+      val pairSlash = InputOutputPair(inputFilename = "\\etc\\passwd", outputPath = "build/test")
+      val exceptionSlash = shouldThrow<IllegalArgumentException> { pairSlash.copyResource() }
+      exceptionSlash.message shouldContain "cannot be an absolute path"
+
+      val pairFwd = InputOutputPair(inputFilename = "/etc/passwd", outputPath = "build/test")
+      val exceptionFwd = shouldThrow<IllegalArgumentException> { pairFwd.copyResource() }
+      exceptionFwd.message shouldContain "cannot be an absolute path"
+    }
+
+    "should normalize backslashes in the output target on all platforms" {
+      val outputDir = "build/test-backslash-target"
+      try {
+        val pair =
+          InputOutputPair(
+            inputFilename = "fixtures/test.txt",
+            outputPath = outputDir,
+            outputFilename = "sub\\copied.txt",
+          )
+        pair.copyResource()
+        val destination = java.io.File("$outputDir/sub/copied.txt")
+        destination.exists() shouldBe true
+      } finally {
+        java.io.File(outputDir).deleteRecursively()
+      }
+    }
+
+    "should fall back to other classloaders when the context loader lacks the resource" {
+      val outputDir = "build/test-classloader-fallback"
+      val previous = Thread.currentThread().contextClassLoader
+      Thread.currentThread().contextClassLoader = java.net.URLClassLoader(emptyArray(), null)
+      try {
+        InputOutputPair(
+            inputFilename = "fixtures/test.txt",
+            outputPath = outputDir,
+            outputFilename = "fallback.txt",
+          )
+          .copyResource()
+        java.io.File("$outputDir/fallback.txt").readText() shouldBe "hello static site generator\n"
+      } finally {
+        Thread.currentThread().contextClassLoader = previous
+        java.io.File(outputDir).deleteRecursively()
+      }
+    }
+
+    "should reject drive specifiers in paths" {
+      val pair = InputOutputPair(inputFilename = "C:/data/x.txt", outputPath = "build/test")
+      val exception = shouldThrow<IllegalArgumentException> { pair.copyResource() }
+      exception.message shouldContain "drive specifier"
+    }
+
+    "should resolve backslashes in outputPath on all platforms" {
+      val outputDir = "build/test-iop-outputpath"
+      try {
+        InputOutputPair(
+            inputFilename = "fixtures/test.txt",
+            outputPath = "build\\test-iop-outputpath",
+            outputFilename = "copied.txt",
+          )
+          .copyResource()
+        java.io.File("$outputDir/copied.txt").exists() shouldBe true
+      } finally {
+        java.io.File(outputDir).deleteRecursively()
+      }
     }
   })

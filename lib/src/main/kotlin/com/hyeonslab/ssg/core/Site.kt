@@ -21,12 +21,14 @@ import com.hyeonslab.ssg.page.PageSettings
 import com.hyeonslab.ssg.page.navMenu
 import com.hyeonslab.ssg.utils.encodeUrlPath
 import com.hyeonslab.ssg.utils.escapeXml
+import com.hyeonslab.ssg.utils.normalizedPathString
+import com.hyeonslab.ssg.utils.relativeAssetHref
 import com.hyeonslab.ssg.utils.validateCssClasses
 import com.hyeonslab.ssg.utils.validateRelativePath
 import com.hyeonslab.ssg.utils.validateUrlChars
 import java.io.File
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 import java.time.LocalDate
 import kotlinx.html.body
 import kotlinx.html.div
@@ -46,8 +48,10 @@ private val LANG_REGEX = Regex("^[a-zA-Z]{2,8}(-[a-zA-Z0-9]{2,8})*$")
  * The site-root-relative URL path for a page: "/" for index.html, otherwise the URL-encoded
  * filename. Shared by the canonical/og:url tags and the sitemap so they cannot drift apart.
  */
-private fun pageUrlPath(page: Page): String =
-  if (page.outputFilename == "index.html") "/" else "/" + encodeUrlPath(page.outputFilename)
+private fun pageUrlPath(page: Page): String {
+  val normalized = normalizedPathString(page.outputFilename)
+  return if (normalized == "index.html") "/" else "/" + encodeUrlPath(normalized)
+}
 
 /**
  * Main configuration for a static site generator.
@@ -112,6 +116,9 @@ data class Site(
   val ogSiteName: String? = null,
 ) {
   init {
+    validateRelativePath(outputPath, "outputPath")
+    require(title.isNotBlank()) { "title cannot be blank" }
+
     // Validate CSS class strings to prevent HTML attribute injection
     validateCssClasses(backgroundColor, "backgroundColor")
     validateCssClasses(htmlClasses, "htmlClasses")
@@ -120,9 +127,12 @@ data class Site(
 
     // Page output filenames must be unique (otherwise generated files silently overwrite each
     // other) and must stay inside the output directory.
-    require(pages.map { it.outputFilename }.toSet().size == pages.size) {
-      val duplicates =
-        pages.groupingBy { it.outputFilename }.eachCount().filterValues { it > 1 }.keys
+    val normalizedNames = pages.map { normalizedPathString(it.outputFilename) }
+    require(normalizedNames.all { it.isNotEmpty() }) {
+      "Page outputFilename cannot resolve to an empty path or directory root."
+    }
+    require(normalizedNames.toSet().size == pages.size) {
+      val duplicates = normalizedNames.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
       "Duplicate page outputFilename(s): ${duplicates.joinToString()}\n" +
         "Each page must have a distinct outputFilename or generated files will overwrite each other."
     }
@@ -139,6 +149,7 @@ data class Site(
     }
 
     baseUrl?.let { url ->
+      require(url.isNotBlank()) { "baseUrl cannot be blank" }
       require(!url.endsWith("/")) {
         "baseUrl must not have a trailing slash: '$url'\n" +
           "Valid example: 'https://example.com' (not 'https://example.com/')"
@@ -146,6 +157,15 @@ data class Site(
       validateUrlChars(url, "baseUrl")
     }
     defaultOgImage?.let { validateUrlChars(it, "defaultOgImage") }
+
+    // Local stylesheets are URL hrefs (emitted into <link> tags, never read as files), so they
+    // accept root-relative and absolute URLs verbatim; only URL-unsafe characters are rejected.
+    resources.localStylesheets.forEach { cssPath ->
+      validateUrlChars(cssPath, "localStylesheet '$cssPath'")
+    }
+    resources.externalStylesheets.forEach { stylesheet ->
+      validateUrlChars(stylesheet.href, "externalStylesheet href '${stylesheet.href}'")
+    }
   }
 
   /**
@@ -187,9 +207,19 @@ data class Site(
     if (failures.isNotEmpty()) {
       val errorMessage =
         failures.joinToString("\n") { (resource, result) ->
-          "  - ${resource.inputFilename}: ${result.exceptionOrNull()?.message}"
+          val ex = result.exceptionOrNull()
+          "  - ${resource.inputFilename}: ${ex?.message ?: ex?.javaClass?.simpleName}"
         }
-      error("Failed to copy ${failures.size} resource(s):\n$errorMessage")
+      val firstException = failures.first().second.exceptionOrNull()
+      val error =
+        IllegalStateException(
+          "Failed to copy ${failures.size} resource(s):\n$errorMessage",
+          firstException,
+        )
+      failures.drop(1).forEach { (_, result) ->
+        result.exceptionOrNull()?.let { error.addSuppressed(it) }
+      }
+      throw error
     }
   }
 
@@ -233,17 +263,14 @@ data class Site(
    * @see copyResources
    */
   fun generateFiles() {
-    try {
-      ensureOutputDir()
-    } catch (e: Exception) {
-      error("Failed to create output directory '$outputPath': ${e.message}")
-    }
+    ensureOutputDirFor()
 
     val results = mutableListOf<Pair<String, Result<Unit>>>()
 
     pages.forEach { page ->
       val result = runCatching {
         val generatedHtml = buildString {
+          appendLine("<!DOCTYPE html>")
           appendHTML().html {
             attributes["lang"] = this@Site.lang
             if (htmlClasses.isNotEmpty()) {
@@ -302,7 +329,8 @@ data class Site(
                   attributes["property"] = "og:url"
                   content = canonicalUrl
                 }
-                (page.ogImage ?: defaultOgImage)?.let { img ->
+                val cardImage = page.ogImage ?: defaultOgImage
+                cardImage?.let { img ->
                   meta {
                     attributes["property"] = "og:image"
                     content = img
@@ -310,21 +338,23 @@ data class Site(
                 }
                 meta {
                   name = "twitter:card"
-                  content = "summary_large_image"
+                  content = if (cardImage != null) "summary_large_image" else "summary"
                 }
               }
               // JSON-LD structured data. Escape angle brackets as their JSON unicode escapes
               // (< / >) so the content cannot terminate the <script> tag or trigger the
               // script-data escaped states (e.g. via "<!--<script>").
-              page.structuredData?.let { json ->
-                script(type = "application/ld+json") {
-                  unsafe { +json.replace("<", "\\u003c").replace(">", "\\u003e") }
+              page.structuredData
+                ?.takeIf { it.isNotBlank() }
+                ?.let { json ->
+                  script(type = "application/ld+json") {
+                    unsafe { +json.replace("<", "\\u003c").replace(">", "\\u003e") }
+                  }
                 }
-              }
-              // Include local stylesheets
+              // Include local stylesheets, depth-prefixed so nested pages resolve them
               resources.localStylesheets.forEach { cssPath ->
                 link {
-                  href = cssPath
+                  href = relativeAssetHref(page.outputFilename, cssPath)
                   rel = "stylesheet"
                 }
               }
@@ -351,7 +381,8 @@ data class Site(
             }
           }
         }
-        File("$outputPath/${page.outputFilename}").writeText(generatedHtml)
+        val targetFile = File(resolvedOutputPath, normalizedPathString(page.outputFilename))
+        targetFile.replaceAtomically { it.writeText(generatedHtml) }
       }
       results.add(page.outputFilename to result)
     }
@@ -361,9 +392,19 @@ data class Site(
     if (failures.isNotEmpty()) {
       val errorMessage =
         failures.joinToString("\n") { (filename, result) ->
-          "  - $filename: ${result.exceptionOrNull()?.message}"
+          val ex = result.exceptionOrNull()
+          "  - $filename: ${ex?.message ?: ex?.javaClass?.simpleName}"
         }
-      error("Failed to generate ${failures.size} file(s):\n$errorMessage")
+      val firstException = failures.first().second.exceptionOrNull()
+      val error =
+        IllegalStateException(
+          "Failed to generate ${failures.size} file(s):\n$errorMessage",
+          firstException,
+        )
+      failures.drop(1).forEach { (_, result) ->
+        result.exceptionOrNull()?.let { error.addSuppressed(it) }
+      }
+      throw error
     }
   }
 
@@ -377,10 +418,12 @@ data class Site(
    * @param lastmod Optional `<lastmod>` date applied to every URL. When null (the default) no
    *   `<lastmod>` is emitted, keeping output deterministic; pass a fixed date for reproducible
    *   builds. Prefer [generate] to produce the pages, sitemap, and robots.txt together.
+   * @throws IllegalStateException if the output directory cannot be created or sitemap.xml cannot
+   *   be written
    */
   fun generateSitemap(lastmod: LocalDate? = null) {
     val base = baseUrl ?: return
-    ensureOutputDir()
+    ensureOutputDirFor("sitemap.xml")
     val xml = buildString {
       appendLine("""<?xml version="1.0" encoding="UTF-8"?>""")
       appendLine("""<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">""")
@@ -392,7 +435,7 @@ data class Site(
       }
       appendLine("</urlset>")
     }
-    File("$outputPath/sitemap.xml").writeText(xml)
+    writeTextArtifact("sitemap.xml", xml)
   }
 
   /**
@@ -403,21 +446,49 @@ data class Site(
    *
    * The generated file allows all user agents (empty `Disallow:`, the standard allow-all form) and
    * includes a `Sitemap:` directive pointing to `sitemap.xml` at the base URL.
+   *
+   * @throws IllegalStateException if the output directory cannot be created or robots.txt cannot be
+   *   written
    */
   fun generateRobotsTxt() {
     val base = baseUrl ?: return
-    ensureOutputDir()
+    ensureOutputDirFor("robots.txt")
     val txt = buildString {
       appendLine("User-agent: *")
       appendLine("Disallow:")
       appendLine("Sitemap: $base/sitemap.xml")
     }
-    File("$outputPath/robots.txt").writeText(txt)
+    writeTextArtifact("robots.txt", txt)
   }
 
-  /** Creates the output directory (and parents) if needed. Thread-safe and idempotent. */
-  private fun ensureOutputDir() {
-    Files.createDirectories(Paths.get(outputPath))
+  /**
+   * The output directory with separators unified, so writes land in nested directories on all
+   * platforms even when `outputPath` uses Windows separators. Error messages keep the raw value.
+   */
+  private val resolvedOutputPath = outputPath.replace('\\', '/')
+
+  /** Creates the output directory, attributing failures to the artifact being generated. */
+  private fun ensureOutputDirFor(artifact: String = "") {
+    try {
+      Files.createDirectories(Path.of(resolvedOutputPath))
+    } catch (e: Exception) {
+      val suffix = if (artifact.isEmpty()) "" else " for $artifact"
+      throw IllegalStateException(
+        "Failed to create output directory '$outputPath'$suffix: ${e.message}",
+        e,
+      )
+    }
+  }
+
+  /** Writes a generated text artifact, attributing failures to the artifact name. */
+  private fun writeTextArtifact(filename: String, content: String) {
+    runCatching { File(resolvedOutputPath, filename).replaceAtomically { it.writeText(content) } }
+      .getOrElse {
+        throw IllegalStateException(
+          "Failed to generate $filename in '$outputPath': ${it.message}",
+          it,
+        )
+      }
   }
 
   /**

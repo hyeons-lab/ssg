@@ -15,7 +15,7 @@
  */
 package com.hyeonslab.ssg.utils
 
-import java.nio.file.Paths
+import java.nio.file.Path
 
 /**
  * Shared input validators used across the library.
@@ -29,10 +29,13 @@ import java.nio.file.Paths
 /**
  * Allowed characters for Tailwind class strings (letters, numbers, spaces, and CSS punctuation).
  */
-internal val CSS_CLASS_REGEX = Regex("^[a-zA-Z0-9\\s\\-_:/\\[\\].%]+$")
+internal val CSS_CLASS_REGEX = Regex("^[a-zA-Z0-9\\s\\-_:/\\[\\].%#!@*,()&]+$")
 
-/** A single Tailwind spacing token — no whitespace, so it cannot inject additional classes. */
+/** A single Tailwind spacing token: no whitespace, so it cannot inject additional classes. */
 internal val SPACING_UNIT_REGEX = Regex("^[a-zA-Z0-9._/\\[\\]-]+$")
+
+/** A Windows drive specifier prefix (`C:`), rejected so validated paths stay relative. */
+internal val DRIVE_SPECIFIER_REGEX = Regex("^[a-zA-Z]:")
 
 /**
  * Validates a Tailwind class string. Empty strings are allowed (they render no classes); any
@@ -42,8 +45,8 @@ internal fun validateCssClasses(classes: String, fieldName: String) {
   if (classes.isEmpty()) return
   require(classes.matches(CSS_CLASS_REGEX)) {
     "$fieldName contains invalid characters: '$classes'\n" +
-      "Allowed characters: letters, numbers, spaces, hyphens, underscores, colons, slashes, brackets, dots, percent signs\n" +
-      "Valid examples: 'bg-white', 'text-blue-600 hover:text-blue-700', 'w-1/2', 'z-[255]', 'bg-white/90'\n" +
+      "Allowed characters: letters, numbers, spaces, hyphens, underscores, colons, slashes, brackets, dots, percent signs, hashes, exclamation marks, at signs, asterisks, commas, parentheses, ampersands\n" +
+      "Valid examples: 'bg-white', 'text-blue-600 hover:text-blue-700', 'w-1/2', 'z-[255]', 'bg-white/90', 'bg-[#1da1f2]', '!flex', '@container'\n" +
       "This validation prevents HTML attribute injection attacks."
   }
 }
@@ -63,23 +66,37 @@ internal fun validateSpacingUnit(value: String, fieldName: String) {
 
 /**
  * Validates that a string used as an attribute URL does not contain characters that could break out
- * of the attribute (quotes or angle brackets).
+ * of the attribute (quotes or angle brackets) or newlines.
  */
 internal fun validateUrlChars(url: String, fieldName: String) {
+  require(url.isNotBlank()) { "$fieldName cannot be blank" }
+  require(url == url.trim()) { "$fieldName must not have leading or trailing whitespace: '$url'" }
   require(!url.contains("\"") && !url.contains("'") && !url.contains("<") && !url.contains(">")) {
     "$fieldName contains invalid characters: '$url'\n" +
       "Invalid characters: quotes (\", '), angle brackets (<, >)\n" +
       "This validation prevents XSS injection via URL attributes."
   }
+  require(!url.contains("\r") && !url.contains("\n")) {
+    "$fieldName must not contain newline characters: '$url'"
+  }
 }
 
 /**
  * Validates that a path is relative and does not traverse outside its base directory. Rejects
- * absolute paths and paths that normalize to a parent reference (starting with "..").
+ * absolute paths, root-relative paths, drive letters, and paths that normalize to a parent
+ * reference (starting with "..").
  */
 internal fun validateRelativePath(path: String, name: String) {
-  val normalized = Paths.get(path).normalize()
-  require(!normalized.isAbsolute) { "$name cannot be an absolute path: $path" }
+  require(path.isNotBlank()) { "$name cannot be blank" }
+  val unified = path.replace('\\', '/')
+  require(!unified.startsWith("/")) { "$name cannot be an absolute path: $path" }
+  require(!DRIVE_SPECIFIER_REGEX.containsMatchIn(unified)) {
+    "$name cannot contain a drive specifier: $path"
+  }
+  val normalized = Path.of(unified).normalize()
+  require(normalized.root == null && !normalized.isAbsolute) {
+    "$name cannot be an absolute path: $path"
+  }
   // Compare path segments, not the string prefix, so a valid name like "..hidden/logo.png"
   // (whose first segment merely starts with "..") is not mistaken for a parent traversal.
   require(!normalized.startsWith("..")) { "$name cannot traverse outside base directory: $path" }

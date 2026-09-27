@@ -18,13 +18,9 @@ package com.hyeonslab.ssg.core
 import com.hyeonslab.ssg.utils.validateRelativePath
 import java.io.File
 import java.io.InputStream
-import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import kotlin.use
-import kotlinx.io.asSink
-import kotlinx.io.asSource
-import kotlinx.io.buffered
 import kotlinx.serialization.Serializable
 
 /**
@@ -32,11 +28,12 @@ import kotlinx.serialization.Serializable
  * loader and finally the system loader. More robust than the system classloader alone, which can
  * miss resources under isolated or child classloaders.
  */
-private fun openClasspathResource(name: String): InputStream? =
-  (Thread.currentThread().contextClassLoader
-      ?: InputOutputPair::class.java.classLoader
-      ?: ClassLoader.getSystemClassLoader())
-    .getResourceAsStream(name)
+private fun openClasspathResource(name: String): InputStream? {
+  val normalized = name.replace('\\', '/')
+  return Thread.currentThread().contextClassLoader?.getResourceAsStream(normalized)
+    ?: InputOutputPair::class.java.classLoader?.getResourceAsStream(normalized)
+    ?: ClassLoader.getSystemResourceAsStream(normalized)
+}
 
 /**
  * Configuration for copying a static resource from classpath to the file system.
@@ -115,9 +112,11 @@ fun InputOutputPair.copyResource() {
   validateRelativePath(outputPath, "Output path")
   outputFilename?.let { validateRelativePath(it, "Output filename") }
 
+  // unify separators so output lands in nested directories on all platforms
+  val resolvedOutputPath = outputPath.replace('\\', '/')
   // use the outputFilename relative to the outputPath, otherwise use the inputFilename
-  val candidateOutputFilename = (outputFilename ?: inputFilename).let { "$outputPath/$it" }
-  val outputFile = File(candidateOutputFilename)
+  val relativeTarget = (outputFilename ?: inputFilename).replace('\\', '/')
+  val outputFile = File(resolvedOutputPath, relativeTarget)
 
   // Resolve the resource first; only touch the filesystem once we know it exists, so a missing
   // resource never leaves empty directories behind.
@@ -132,31 +131,9 @@ fun InputOutputPair.copyResource() {
           "  4. Verify the path uses forward slashes (/) not backslashes (\\)"
       )
 
-  resource.asSource().buffered().use { input ->
-    // Create parent directories (thread-safe, creates all parents, idempotent)
-    val parent = outputFile.parentFile
-    parent?.let { Files.createDirectories(it.toPath()) }
-
-    // Write to a temp file in the destination directory, then move it into place. This way a
-    // failure mid-copy (e.g. out of disk) cannot truncate or corrupt an existing output file.
-    val tempFile = File.createTempFile("ssg-", ".tmp", parent ?: File("."))
-    try {
-      tempFile.outputStream().asSink().buffered().use { sink -> sink.transferFrom(input) }
-      // Prefer an atomic move so the output file is never observed half-written. Not all
-      // filesystems support ATOMIC_MOVE, so fall back to a plain replacing move when they don't.
-      try {
-        Files.move(
-          tempFile.toPath(),
-          outputFile.toPath(),
-          StandardCopyOption.ATOMIC_MOVE,
-          StandardCopyOption.REPLACE_EXISTING,
-        )
-      } catch (_: AtomicMoveNotSupportedException) {
-        Files.move(tempFile.toPath(), outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
-      }
-    } catch (e: Throwable) {
-      tempFile.delete()
-      throw e
+  resource.use { input ->
+    outputFile.replaceAtomically { tempFile ->
+      Files.copy(input, tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
     }
   }
 }

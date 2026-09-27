@@ -48,3 +48,6 @@ bin/
 ### Claude Code & Agents ###
 .claude/
 .agents/
+
+### Git Worktrees ###
+/worktrees/

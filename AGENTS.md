@@ -13,8 +13,8 @@ This is **Hyeons' Lab Static Site Generator** - a type-safe Kotlin library for g
 ## Build System
 
 **Technology:**
-- Gradle 9.0+ (required for Kotlin 2.3.10)
-- Kotlin 2.3.10
+- Gradle 9.0+ (required for Kotlin 2.4.20)
+- Kotlin 2.4.20
 - JVM Toolchain 21
 - Uses buildSrc convention plugins
 
@@ -205,7 +205,7 @@ if (failures.isNotEmpty()) {
 ## Testing
 
 **Test Framework:**
-- **Kotest 5.9.1** - Kotlin-native testing framework
+- **Kotest 6.2.5** - Kotlin-native testing framework
 - **kotlin.test** - Standard Kotlin test utilities
 - **JUnit 5** - Test runner (via Kotest)
 
@@ -405,12 +405,11 @@ From recent code review (see CODE_REVIEW.md - local file only):
 
 **Core:**
 - `kotlinx.html:0.12.0` - Type-safe HTML generation
-- `kotlinx.io:0.8.2` - Resource copying
-- `kotlinx.serialization:1.10.0` - Future feature (not currently used)
+- `kotlinx.serialization:1.11.0` - Future feature (not currently used)
 
 **Gradle Plugins:**
-- `kotlin-gradle-plugin:2.3.10`
-- `kotlin-serialization:2.3.10`
+- `kotlin-gradle-plugin:2.4.20`
+- `kotlin-serialization:2.4.20`
 
 **Consumer projects typically need:**
 - `com.hyeons-lab.tailwind` plugin for Tailwind CSS compilation

@@ -142,7 +142,7 @@ class NavMenuTest :
           }
         }
 
-        html shouldContain "sticky"
+        html shouldContain "sticky top-0"
       }
 
       test("should not apply sticky class when isSticky is false") {
@@ -166,8 +166,7 @@ class NavMenuTest :
           }
         }
 
-        // Should have empty sticky class value (rendered as just whitespace)
-        // The implementation uses "$sticky" where sticky = "" when false
+        // navClasses is built with buildList, so when isSticky is false no sticky token is added
         html shouldNotContain "sticky"
       }
 
@@ -216,7 +215,7 @@ class NavMenuTest :
           }
         }
 
-        html shouldNotContain "backdrop-blur-xl"
+        html shouldNotContain "backdrop-blur-md"
       }
 
       test("should include Instagram link when instagram username is provided") {
@@ -243,6 +242,8 @@ class NavMenuTest :
 
         html shouldContain "https://www.instagram.com/testuser"
         html shouldContain "fa-instagram"
+        html shouldContain "aria-label=\"Instagram\""
+        html shouldContain "rel=\"noopener noreferrer\""
       }
 
       test("should not include Instagram link when instagram is null") {
@@ -295,6 +296,134 @@ class NavMenuTest :
 
         html shouldContain "mailto:test@example.com"
         html shouldContain "fa-envelope"
+        html shouldContain "aria-label=\"Email\""
+      }
+
+      test("should compute relative links with ../ for nested selected page") {
+        val nestedPage =
+          object : Page {
+            override val title = "Nested"
+            override val outputFilename = "docs/nested/guide.html"
+            override val content = { _: PageSettings, _: kotlinx.html.FlowContent -> }
+          }
+        val html = buildString {
+          appendHTML().html {
+            body {
+              navMenu(
+                selected = nestedPage,
+                pages = listOf(homePage, nestedPage),
+                navMenuSettings =
+                  NavMenuSettings(
+                    backgroundColor = "bg-white",
+                    navSelectedColor = "text-blue-600",
+                    navDefaultColor = "text-gray-700",
+                    isSticky = false,
+                    logo = Logo(imageUrl = "logo.png", width = 50, height = 50),
+                    blurNavBackground = false,
+                  ),
+              )
+            }
+          }
+        }
+
+        html shouldContain "href=\"../../index.html\""
+        html shouldContain "href=\"../../docs/nested/guide.html\""
+        html shouldContain "src=\"../../logo.png\""
+      }
+
+      test("should normalize page path before computing ../ depth") {
+        listOf(
+            Triple("docs//double.html", "../index.html", "../docs/double.html"),
+            Triple("./top.html", "./index.html", "./top.html"),
+            Triple("sub/../flat.html", "./index.html", "./flat.html"),
+          )
+          .forEach { (spelling, expectedHomeHref, expectedOddHref) ->
+            val oddPage =
+              object : Page {
+                override val title = "Odd"
+                override val outputFilename = spelling
+                override val content = { _: PageSettings, _: kotlinx.html.FlowContent -> }
+              }
+            val html = buildString {
+              appendHTML().html {
+                body {
+                  navMenu(
+                    selected = oddPage,
+                    pages = listOf(homePage, oddPage),
+                    navMenuSettings =
+                      NavMenuSettings(
+                        backgroundColor = "bg-white",
+                        navSelectedColor = "text-blue-600",
+                        navDefaultColor = "text-gray-700",
+                        isSticky = false,
+                        logo = Logo(imageUrl = "logo.png", width = 50, height = 50),
+                        blurNavBackground = false,
+                      ),
+                  )
+                }
+              }
+            }
+
+            html shouldContain "href=\"$expectedHomeHref\""
+            html shouldContain "href=\"$expectedOddHref\""
+          }
+      }
+
+      test("should render selected color without whitespace artifact") {
+        val html = buildString {
+          appendHTML().html {
+            body {
+              navMenu(
+                selected = aboutPage,
+                pages = listOf(homePage, aboutPage),
+                navMenuSettings =
+                  NavMenuSettings(
+                    backgroundColor = "bg-white",
+                    navSelectedColor = "text-blue-600",
+                    navDefaultColor = "text-gray-700",
+                    isSticky = false,
+                    logo = Logo(imageUrl = "logo.png", width = 50, height = 50),
+                    blurNavBackground = false,
+                  ),
+              )
+            }
+          }
+        }
+
+        // Exact single-space join between the span base classes and the appended selected color:
+        // the old `classes += " $selectedColor"` rendering produced a double space here.
+        html shouldContain "lg:text-lg text-blue-600"
+        html shouldNotContain "lg:text-lg  text-blue-600"
+      }
+
+      test("should pass data URI logos through without depth prefix") {
+        val nestedPage =
+          object : Page {
+            override val title = "Nested"
+            override val outputFilename = "docs/nested/guide.html"
+            override val content = { _: PageSettings, _: kotlinx.html.FlowContent -> }
+          }
+        val html = buildString {
+          appendHTML().html {
+            body {
+              navMenu(
+                selected = nestedPage,
+                pages = listOf(homePage, nestedPage),
+                navMenuSettings =
+                  NavMenuSettings(
+                    backgroundColor = "bg-white",
+                    navSelectedColor = "text-blue-600",
+                    navDefaultColor = "text-gray-700",
+                    isSticky = false,
+                    logo = Logo(imageUrl = "data:image/png;base64,AAA", width = 50, height = 50),
+                    blurNavBackground = false,
+                  ),
+              )
+            }
+          }
+        }
+
+        html shouldContain "src=\"data:image/png;base64,AAA\""
       }
 
       test("should not include email link when email is null") {

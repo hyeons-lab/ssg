@@ -37,7 +37,7 @@ To enforce that PRs must pass the build before merging, configure branch protect
 ## CI/CD Workflow
 
 The `.github/workflows/build.yml` workflow runs on:
-- Every push to `main` and `feature/*` branches
+- Every push to `main` and development branches (`feature/**`, `feat/**`, `fix/**`, `refactor/**`, etc.)
 - Every pull request targeting `main`
 
 The workflow:

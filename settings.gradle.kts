@@ -3,7 +3,10 @@ rootProject.name = "ssg"
 
 // Plugin management - configure repositories for plugin resolution
 pluginManagement {
-    includeBuild("vendor/gradle-tailwind/plugin")
+    val vendorPluginDir = file("vendor/gradle-tailwind/plugin")
+    if (vendorPluginDir.exists() && file("$vendorPluginDir/build.gradle.kts").exists()) {
+        includeBuild("vendor/gradle-tailwind/plugin")
+    }
     repositories {
         mavenLocal()
         mavenCentral()

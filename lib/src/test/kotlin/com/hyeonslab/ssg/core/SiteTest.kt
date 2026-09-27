@@ -4,17 +4,22 @@ import com.hyeonslab.ssg.page.Logo
 import com.hyeonslab.ssg.page.NavMenuSettings
 import com.hyeonslab.ssg.page.Page
 import com.hyeonslab.ssg.page.PageSettings
+import com.hyeonslab.ssg.utils.Tailwind
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
+import io.kotest.matchers.string.shouldStartWith
 import java.io.File
 import java.nio.file.Files
 import kotlin.io.path.Path
 import kotlinx.html.div
 import kotlinx.html.h1
 import kotlinx.html.p
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class SiteTest :
   FunSpec({
@@ -109,6 +114,20 @@ class SiteTest :
         exception.message shouldContain "Duplicate page outputFilename"
       }
 
+      test("should reject page outputFilenames that collide after normalization") {
+        val nested =
+          object : Page {
+            override val title = "Nested"
+            override val outputFilename = "docs/../index.html"
+            override val content = { _: PageSettings, _: kotlinx.html.FlowContent -> }
+          }
+        val exception =
+          shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test-output", pages = listOf(homePage, nested))
+          }
+        exception.message shouldContain "Duplicate page outputFilename"
+      }
+
       test("should reject a page outputFilename that traverses outside the output directory") {
         val evilPage =
           object : Page {
@@ -121,6 +140,103 @@ class SiteTest :
             createTestSite("build/test-output", pages = listOf(evilPage))
           }
         exception.message shouldContain "cannot traverse outside base directory"
+      }
+
+      test("should reject page outputFilenames that normalize to empty paths") {
+        listOf(".", "./", "docs/..").forEach { emptySpelling ->
+          val emptyPage =
+            object : Page {
+              override val title = "Empty"
+              override val outputFilename = emptySpelling
+              override val content = { _: PageSettings, _: kotlinx.html.FlowContent -> }
+            }
+          val exception =
+            shouldThrow<IllegalArgumentException> {
+              createTestSite("build/test-output", pages = listOf(emptyPage))
+            }
+          exception.message shouldContain "cannot resolve to an empty path"
+        }
+      }
+    }
+
+    context("outputPath validation") {
+      test("should reject absolute or traversing outputPath") {
+        val absException = shouldThrow<IllegalArgumentException> { createTestSite("/etc/ssg") }
+        absException.message shouldContain "cannot be an absolute path"
+
+        val travException = shouldThrow<IllegalArgumentException> { createTestSite("../../dist") }
+        travException.message shouldContain "cannot traverse outside base directory"
+
+        val blankException = shouldThrow<IllegalArgumentException> { createTestSite("") }
+        blankException.message shouldContain "cannot be blank"
+      }
+    }
+
+    context("stylesheet validation") {
+      test("should accept root-relative and absolute-URL local stylesheets verbatim") {
+        val site =
+          createTestSite(
+            "build/test-output",
+            localStylesheets = listOf("/css/app.css", "https://cdn.example.com/app.css"),
+          )
+        site.generateFiles()
+
+        val html = File("build/test-output/index.html").readText()
+        html shouldContain "href=\"/css/app.css\""
+        html shouldContain "href=\"https://cdn.example.com/app.css\""
+      }
+
+      test("should reject local stylesheets with invalid URL characters") {
+        val exception =
+          shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test-output", localStylesheets = listOf("css/\"x.css"))
+          }
+        exception.message shouldContain "contains invalid characters"
+      }
+
+      test("should reject local stylesheets containing newlines") {
+        val exception =
+          shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test-output", localStylesheets = listOf("css/a\nb.css"))
+          }
+        exception.message shouldContain "must not contain newline"
+      }
+
+      test("should reject local stylesheets with surrounding whitespace") {
+        val exception =
+          shouldThrow<IllegalArgumentException> {
+            createTestSite("build/test-output", localStylesheets = listOf(" css/app.css"))
+          }
+        exception.message shouldContain "must not have leading or trailing whitespace"
+      }
+
+      test("should reject external stylesheets with invalid URL characters") {
+        val exception =
+          shouldThrow<IllegalArgumentException> {
+            createTestSite(
+              "build/test-output",
+              externalStylesheets =
+                listOf(ExternalStylesheet(href = "https://example.com/\" onclick=\"alert(1)")),
+            )
+          }
+        exception.message shouldContain "contains invalid characters"
+      }
+    }
+
+    context("serialization") {
+      test("should serialize and deserialize PageSettings and TextConfig") {
+        val settings = PageSettings(bodyTextColor = Tailwind.Colors.Text.Custom("text-red-500"))
+        val json = Json.encodeToString(settings)
+        val decoded = Json.decodeFromString<PageSettings>(json)
+        decoded.bodyTextColor.color shouldBe "text-red-500"
+      }
+
+      test("should round-trip the default and Neutral text colors") {
+        listOf(PageSettings(), PageSettings(bodyTextColor = Tailwind.Colors.Text.Neutral.`900`))
+          .forEach { settings ->
+            val decoded = Json.decodeFromString<PageSettings>(Json.encodeToString(settings))
+            decoded.bodyTextColor shouldBe settings.bodyTextColor
+          }
       }
     }
 
@@ -148,6 +264,13 @@ class SiteTest :
             "bg-white/90",
             "text-sm md:text-base lg:text-lg",
             "flex flex-col items-center",
+            "bg-[#1da1f2]",
+            "!flex",
+            "@container",
+            "w-[calc(100%-1rem)]",
+            "grid-cols-[1fr,2fr]",
+            "*:p-4",
+            "[&_p]:mt-2",
           )
 
         validClasses.forEach { classes ->
@@ -167,6 +290,8 @@ class SiteTest :
               .copy(backgroundColor = "bg-white\" onclick=\"alert('XSS')\" class=\"")
           }
         exception.message shouldContain "backgroundColor contains invalid characters"
+        exception.message shouldContain "hashes, exclamation marks, at signs"
+        exception.message shouldContain "bg-[#1da1f2]"
       }
 
       test("should reject CSS classes with angle brackets") {
@@ -332,6 +457,11 @@ class SiteTest :
         exception.message shouldContain "nonexistent1.txt"
         exception.message shouldContain "nonexistent2.txt"
         exception.message shouldContain "nonexistent3.txt"
+        exception.cause shouldNotBe null
+        exception.cause?.message shouldContain "nonexistent1.txt"
+        exception.suppressed.size shouldBe 2
+        exception.suppressed[0].message shouldContain "nonexistent2.txt"
+        exception.suppressed[1].message shouldContain "nonexistent3.txt"
 
         File(outputPath).deleteRecursively()
       }
@@ -359,6 +489,128 @@ class SiteTest :
 
         // Directory should now exist
         Files.exists(Path(outputPath)) shouldBe true
+      }
+
+      test("should include HTML5 <!DOCTYPE html> declaration") {
+        val outputPath = "build/test-output"
+        val site = createTestSite(outputPath)
+        site.generateFiles()
+
+        val html = File("$outputPath/index.html").readText()
+        html shouldStartWith "<!DOCTYPE html>"
+      }
+
+      test("should generate pages with nested subdirectories in outputFilename") {
+        val nestedPage =
+          object : Page {
+            override val title = "Nested Page"
+            override val outputFilename = "docs/nested/guide.html"
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { h1 { +"Nested Guide" } }
+            }
+          }
+        val outputPath = "build/test-nested-subdirs"
+        val site = createTestSite(outputPath, pages = listOf(nestedPage))
+        site.generateFiles()
+
+        val nestedFile = File("$outputPath/docs/nested/guide.html")
+        nestedFile.exists() shouldBe true
+        nestedFile.readText() shouldContain "Nested Guide"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should depth-prefix local stylesheet hrefs on nested pages") {
+        val nestedPage =
+          object : Page {
+            override val title = "Nested Page"
+            override val outputFilename = "docs/nested/guide.html"
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { h1 { +"Nested Guide" } }
+            }
+          }
+        val outputPath = "build/test-nested-css"
+        val site = createTestSite(outputPath, pages = listOf(nestedPage))
+        site.generateFiles()
+
+        val html = File("$outputPath/docs/nested/guide.html").readText()
+        html shouldContain "href=\"../../css/tailwind.css\""
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should leave query strings in local stylesheet hrefs unencoded") {
+        val nestedPage =
+          object : Page {
+            override val title = "Nested Page"
+            override val outputFilename = "docs/nested/guide.html"
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { h1 { +"Nested Guide" } }
+            }
+          }
+        val outputPath = "build/test-nested-css-query"
+        val site =
+          createTestSite(
+            outputPath,
+            pages = listOf(nestedPage),
+            localStylesheets = listOf("css/app.css?v=2"),
+          )
+        site.generateFiles()
+
+        val html = File("$outputPath/docs/nested/guide.html").readText()
+        html shouldContain "href=\"../../css/app.css?v=2\""
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should normalize backslashes in page outputFilenames end to end") {
+        val backslashPage =
+          object : Page {
+            override val title = "Backslash"
+            override val outputFilename = "docs\\nested\\guide.html"
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { h1 { +"Backslash Guide" } }
+            }
+          }
+        val outputPath = "build/test-backslash-page"
+        val site = createTestSite(outputPath, pages = listOf(backslashPage))
+        site.generateFiles()
+
+        val nestedFile = File("$outputPath/docs/nested/guide.html")
+        nestedFile.exists() shouldBe true
+        val html = nestedFile.readText()
+        html shouldContain "href=\"../../docs/nested/guide.html\""
+        html shouldNotContain "%5C"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should normalize dot-segment page spellings in files and URLs") {
+        val dotPage =
+          object : Page {
+            override val title = "Dot"
+            override val outputFilename = "docs/../about.html"
+            override val content = { _: PageSettings, flow: kotlinx.html.FlowContent ->
+              flow.div { h1 { +"Dot Page" } }
+            }
+          }
+        val outputPath = "build/test-dot-segments"
+        val site =
+          createTestSite(outputPath, pages = listOf(dotPage), baseUrl = "https://example.com")
+        site.generateFiles()
+        site.generateSitemap()
+
+        val file = File("$outputPath/about.html")
+        file.exists() shouldBe true
+        file.readText() shouldContain "https://example.com/about.html"
+        File("$outputPath/sitemap.xml").readText() shouldContain
+          "<loc>https://example.com/about.html</loc>"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should resolve backslashes in outputPath on all platforms") {
+        val outputPath = "build\\test-outputpath-backslash"
+        val site = createTestSite(outputPath)
+        site.generateFiles()
+
+        File("build/test-outputpath-backslash/index.html").exists() shouldBe true
+        File("build/test-outputpath-backslash").deleteRecursively()
       }
 
       test("should generate HTML file for each page") {
@@ -414,8 +666,8 @@ class SiteTest :
         site.generateFiles()
 
         val html = File("$outputPath/index.html").readText()
-        html shouldContain "href=\"css/tailwind.css\""
-        html shouldContain "href=\"css/custom.css\""
+        html shouldContain "href=\"./css/tailwind.css\""
+        html shouldContain "href=\"./css/custom.css\""
         html shouldContain "rel=\"stylesheet\""
       }
 
@@ -478,11 +730,40 @@ class SiteTest :
       }
 
       test("should throw error when output directory creation fails") {
-        // Use an invalid path that will fail to create
-        val site = createTestSite("/invalid/path/that/cannot/be/created")
+        val blockingFile = File("build/test-dir-creation-failure")
+        blockingFile.parentFile?.let { Files.createDirectories(it.toPath()) }
+        blockingFile.createNewFile()
+        try {
+          val site = createTestSite("${blockingFile.path}/child-dir")
 
-        val exception = shouldThrow<IllegalStateException> { site.generateFiles() }
-        exception.message shouldContain "Failed to create output directory"
+          val exception = shouldThrow<IllegalStateException> { site.generateFiles() }
+          exception.message shouldContain "Failed to create output directory"
+          exception.cause shouldNotBe null
+        } finally {
+          blockingFile.delete()
+        }
+      }
+
+      test("should report sitemap and robots failures with artifact context") {
+        val outputDir = File("build/test-artifact-failure")
+        Files.createDirectories(outputDir.toPath())
+        val blockingSitemap = File(outputDir, "sitemap.xml").apply { mkdir() }
+        val blockingRobots = File(outputDir, "robots.txt").apply { mkdir() }
+        try {
+          val site = createTestSite(outputDir.path, baseUrl = "https://example.com")
+
+          val sitemapException = shouldThrow<IllegalStateException> { site.generateSitemap() }
+          sitemapException.message shouldContain "Failed to generate sitemap.xml in"
+          sitemapException.cause shouldNotBe null
+
+          val robotsException = shouldThrow<IllegalStateException> { site.generateRobotsTxt() }
+          robotsException.message shouldContain "Failed to generate robots.txt in"
+          robotsException.cause shouldNotBe null
+        } finally {
+          blockingSitemap.delete()
+          blockingRobots.delete()
+          outputDir.delete()
+        }
       }
 
       test("should handle exceptions thrown during page content rendering") {
@@ -504,6 +785,8 @@ class SiteTest :
         val exception = shouldThrow<IllegalStateException> { site.generateFiles() }
         exception.message shouldContain "Failed to generate 1 file(s)"
         exception.message shouldContain "crash.html"
+        exception.cause shouldNotBe null
+        exception.cause?.message shouldBe "Simulated rendering error"
 
         File(outputPath).deleteRecursively()
       }
@@ -543,6 +826,9 @@ class SiteTest :
         exception.message shouldContain "crash2.html"
         // homePage should not be in error list
         exception.message shouldNotContain "index.html"
+        exception.cause shouldNotBe null
+        exception.cause?.message shouldBe "Error 1"
+        exception.suppressed.firstOrNull()?.message shouldBe "Error 2"
 
         File(outputPath).deleteRecursively()
       }
@@ -886,6 +1172,17 @@ class SiteTest :
         val sitemap = File("$outputPath/sitemap.xml").readText()
         sitemap shouldContain "https://x.com/my%20page.html"
         sitemap shouldNotContain "my page.html"
+        File(outputPath).deleteRecursively()
+      }
+
+      test("should XML-escape ampersands from baseUrl in loc values") {
+        val outputPath = "build/test-sitemap-amp"
+        val site = createTestSite(outputPath, baseUrl = "https://x.com/?a=1&b=2")
+        site.generateSitemap()
+
+        val sitemap = File("$outputPath/sitemap.xml").readText()
+        sitemap shouldContain "https://x.com/?a=1&amp;b=2/"
+        sitemap shouldNotContain "?a=1&b=2/"
         File(outputPath).deleteRecursively()
       }
 

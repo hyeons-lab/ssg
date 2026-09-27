@@ -18,8 +18,12 @@ package com.hyeonslab.ssg.core.dsl
 import com.hyeonslab.ssg.core.IntegrationConfig
 import com.hyeonslab.ssg.core.ResourceConfig
 import com.hyeonslab.ssg.core.Site
+import com.hyeonslab.ssg.page.NavMenuSettings
 import com.hyeonslab.ssg.page.Page
 import com.hyeonslab.ssg.page.PageSettings
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 /** DSL marker to prevent accidental scope escaping in nested builders. */
 @DslMarker annotation class SsgDsl
@@ -99,7 +103,9 @@ import com.hyeonslab.ssg.page.PageSettings
  * @see SiteBuilder
  * @see Site
  */
+@OptIn(ExperimentalContracts::class)
 fun site(block: SiteBuilder.() -> Unit): Site {
+  contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
   return SiteBuilder().apply(block).build()
 }
 
@@ -156,9 +162,9 @@ class SiteBuilder {
    */
   var ogSiteName: String? = null
 
-  private var navigationBuilder: NavigationBuilder? = null
-  private var resourcesBuilder: ResourcesBuilder? = null
-  private var integrationsBuilder: IntegrationsBuilder? = null
+  var navigation: NavMenuSettings? = null
+  var resources: ResourceConfig = ResourceConfig()
+  var integrations: IntegrationConfig = IntegrationConfig()
 
   /**
    * Configure navigation menu settings using DSL.
@@ -176,7 +182,7 @@ class SiteBuilder {
    * @see NavigationBuilder
    */
   fun navigation(block: NavigationBuilder.() -> Unit) {
-    navigationBuilder = NavigationBuilder().apply(block)
+    navigation = NavigationBuilder().apply(block).build()
   }
 
   /**
@@ -194,7 +200,7 @@ class SiteBuilder {
    * @see ResourcesBuilder
    */
   fun resources(block: ResourcesBuilder.() -> Unit) {
-    resourcesBuilder = ResourcesBuilder().apply(block)
+    resources = ResourcesBuilder().apply(block).build()
   }
 
   /**
@@ -210,7 +216,7 @@ class SiteBuilder {
    * @see IntegrationsBuilder
    */
   fun integrations(block: IntegrationsBuilder.() -> Unit) {
-    integrationsBuilder = IntegrationsBuilder().apply(block)
+    integrations = IntegrationsBuilder().apply(block).build()
   }
 
   /** Build the Site instance from the configured values. */
@@ -228,9 +234,9 @@ class SiteBuilder {
       bodyClasses = bodyClasses,
       contentClasses = contentClasses,
       pages = pages!!,
-      navigation = navigationBuilder?.build(),
-      resources = resourcesBuilder?.build() ?: ResourceConfig(),
-      integrations = integrationsBuilder?.build() ?: IntegrationConfig(),
+      navigation = navigation,
+      resources = resources,
+      integrations = integrations,
       pageSettings = pageSettings,
       baseUrl = baseUrl,
       defaultOgImage = defaultOgImage,

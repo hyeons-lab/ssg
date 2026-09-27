@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Prepend HTML5 `<!DOCTYPE html>` to all generated HTML pages to enforce Standards Mode.
+- Atomic file writes for generated pages, sitemap.xml, and robots.txt using temporary files with atomic move fallback.
+- Automatic intermediate directory creation for nested page output paths (e.g. `docs/guide.html`).
+- Depth-aware relative link computation (`../`) and URL-encoding for navigation links on nested pages.
+- Serialization support (`@Serializable`) on `Tailwind.Colors.Text` and concrete color variants.
+- Sticky navigation threshold class `top-0` when `isSticky` is enabled.
+- Accessibility `aria-label` and `rel="noopener noreferrer"` attributes on navigation social links.
+- Convenience `logo(Logo)` overload and default color values in navigation DSL builder.
+- Directory existence check in `settings.gradle.kts` for submodule composite builds.
+- Local stylesheet and logo image URLs are automatically depth-prefixed (`../`) on nested pages so nested output keeps its styling and logo.
+
+### Changed
+- Deprecated `ExternalStylesheet.TAILWIND_CSS_3_4_17` because Tailwind Play CDN serves JavaScript rather than CSS.
+- Optimized `Encoding.escapeXml` with zero-allocation fast path and single-pass builder.
+- Streamlined `InputOutputPair` copying with direct `Files.copy`.
+- Broadened CI branch trigger patterns to support conventional branch names.
+- Updated build dependencies: Kotlin 2.4.20, Gradle 9.8.0, Kotest 6.2.5, Dokka 2.2.0, kotlinx.serialization 1.11.0, Gradle Tailwind plugin 0.3.1, vanniktech publish plugin 0.37.0, ktfmt 0.27.0
+- Updated CI actions: checkout v7, setup-java v6, setup-gradle v6, upload-artifact v7
+- `localStylesheets` entries are validated as URL hrefs (quotes, angle brackets, and newlines rejected); root-relative and absolute URLs are accepted and emitted verbatim.
+- Removed the now-unused kotlinx.io dependency (resource copying uses `Files.copy`).
+- **BREAKING:** `Site` construction now validates `outputPath` (must be relative), `title` (non-blank), `baseUrl` (non-blank), and page filenames (no normalized duplicates) up front. Failures that used to surface at `generateFiles()` time now throw `IllegalArgumentException` at construction. Migration: pass `outputPath` relative to the working directory.
+- URL fields reject leading/trailing whitespace instead of emitting mangled hrefs.
+
+### Fixed
+- Path traversal validation now rejects Windows drive-relative root paths, drive specifiers, and blank paths.
+- CSS class validation now supports Tailwind arbitrary values and modifiers containing `#`, `!`, `@`, commas, parentheses, `*`, and `&`.
+- Classloader resource lookup in `InputOutputPair` now sequentially falls back when a classloader does not contain the resource.
+- URL validation rejects unencoded newlines and blank URLs.
+- `generateSitemap` and `generateRobotsTxt` failures now report the artifact name and step instead of propagating raw IO exceptions.
+- Navigation `../` prefixes are computed from the normalized page path, so `./x.html`, doubled slashes, and `..` segments link correctly.
+- `InputOutputPair` output targets containing backslashes now resolve to the same location on all platforms instead of writing literally-named files on Unix.
+- Page outputFilenames with backslashes now generate nested output with correct links on all platforms (previously wrote literally-named files with `%5C` links on Unix).
+- `data:` (and other schemed) asset URLs pass through depth-prefixing untouched instead of breaking.
+- Canonical, og:url, and sitemap URLs are computed from the normalized page path, and interior-`..` page spellings no longer fail generation.
+- `outputPath` values with backslashes now resolve to nested directories on all platforms instead of literally-named directories on Unix.
+- IO failure errors from directory creation, sitemap, and robots.txt generation now chain the underlying cause instead of dropping it.
+
 ## [0.1.0] - 2026-02-08
 
 ### Added

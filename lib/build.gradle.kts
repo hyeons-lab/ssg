@@ -14,7 +14,6 @@ version = libs.versions.artifactVersion.get()
 
 dependencies {
   api(libs.bundles.kotlinx.html)
-  implementation(libs.kotlinx.io.core)
   implementation(libs.kotlinxSerialization)
 
   // Testing

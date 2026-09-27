@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ main, feature/* ]
+    branches: [ main, feature/**, feat/**, fix/**, refactor/**, test/**, ci/**, chore/**, build/** ]
   pull_request:
     branches: [ main ]
 
@@ -12,22 +12,21 @@ jobs:
 
     permissions:
       contents: read
-      pull-requests: write
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: '21'
           distribution: 'temurin'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
@@ -36,7 +35,7 @@ jobs:
 
       - name: Upload build reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-reports
           path: |

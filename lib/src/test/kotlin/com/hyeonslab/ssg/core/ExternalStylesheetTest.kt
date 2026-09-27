@@ -52,5 +52,13 @@ class ExternalStylesheetTest :
 
         isValidSRI shouldBe true
       }
+
+      it("should pin the Play CDN constant to the newest version the CDN hosts") {
+        // 3.4.17 is the newest version cdn.tailwindcss.com serves (3.4.18+ return an error stub),
+        // even though the npm v3 LTS train is newer. Do not bump this from the npm version.
+        @Suppress("DEPRECATION") val play = ExternalStylesheet.TAILWIND_CSS_3_4_17
+
+        play.href shouldBe "https://cdn.tailwindcss.com/3.4.17"
+      }
     }
   })
